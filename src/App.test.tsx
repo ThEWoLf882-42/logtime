@@ -1,37 +1,29 @@
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import App from './App'
 
 describe('dashboard', () => {
-  it('starts with unknown hours, allows an explicit demo, and saves a target', () => {
+  it('starts without assumed hours and saves the requirement', () => {
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
     render(<App />)
-    expect(screen.getByRole('status')).toHaveTextContent('Ready when you are')
-    expect(screen.getByRole('button', { name: /Export CSV/ })).toBeDisabled()
-    expect(
-      screen.queryAllByText('No hours', { selector: '.day-status' }),
-    ).toHaveLength(0)
-    fireEvent.click(screen.getByRole('button', { name: /Explore a demo/ }))
-    expect(screen.getByRole('status')).toHaveTextContent('Demo data')
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Enter your campus login',
+    )
+    expect(screen.getByRole('progressbar')).toHaveAttribute(
+      'aria-valuetext',
+      'No data loaded',
+    )
     expect(fetchMock).not.toHaveBeenCalled()
-    fireEvent.change(screen.getByLabelText('Cycle target'), {
+    fireEvent.change(screen.getByLabelText('Required hours'), {
       target: { value: '150' },
     })
     expect(localStorage.getItem('logtime.target')).toBe('150')
-    fireEvent.change(screen.getByLabelText('Cycle target'), {
+    fireEvent.change(screen.getByLabelText('Required hours'), {
       target: { value: '' },
     })
-    fireEvent.blur(screen.getByLabelText('Cycle target'))
-    expect(screen.getByLabelText('Cycle target')).toHaveValue(150)
-    fireEvent.click(screen.getByRole('button', { name: /Exit demo/ }))
-    expect(screen.getByRole('status')).toHaveTextContent('Ready when you are')
+    fireEvent.blur(screen.getByLabelText('Required hours'))
+    expect(screen.getByLabelText('Required hours')).toHaveValue(150)
   })
   it('shows failure without invented zero totals and supports retry', async () => {
     const fetchMock = vi.fn().mockRejectedValue(new Error('offline'))
@@ -40,7 +32,7 @@ describe('dashboard', () => {
     fireEvent.change(screen.getByLabelText('Your campus login'), {
       target: { value: 'student' },
     })
-    fireEvent.click(screen.getByRole('button', { name: /Load hours/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Check hours/ }))
     await waitFor(() =>
       expect(screen.getByRole('status')).toHaveTextContent('Couldn’t load'),
     )
@@ -55,7 +47,10 @@ describe('dashboard', () => {
         'Loaded for student',
       ),
     )
-    expect(screen.getByRole('button', { name: /Export CSV/ })).toBeEnabled()
+    expect(screen.getByRole('progressbar')).toHaveAttribute(
+      'aria-valuetext',
+      '24.0 of 100 hours',
+    )
   })
   it('prevents an old login response from overwriting a newer one', async () => {
     const delayed: Array<(value: unknown) => void> = []
@@ -70,7 +65,7 @@ describe('dashboard', () => {
     render(<App />)
     const input = screen.getByLabelText('Your campus login')
     fireEvent.change(input, { target: { value: 'first' } })
-    fireEvent.click(screen.getByRole('button', { name: /Load hours/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Check hours/ }))
     fireEvent.change(input, { target: { value: 'second' } })
     fireEvent.click(screen.getByRole('button', { name: /Load again/ }))
     await waitFor(() =>
@@ -103,15 +98,13 @@ describe('dashboard', () => {
     fireEvent.change(screen.getByLabelText('Your campus login'), {
       target: { value: 'student' },
     })
-    fireEvent.click(screen.getByRole('button', { name: /Load hours/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Check hours/ }))
     await waitFor(() =>
       expect(screen.getByRole('status')).toHaveTextContent('1 day unavailable'),
     )
-    fireEvent.click(
-      within(
-        screen.getByRole('group', { name: 'Filter daily activity' }),
-      ).getByRole('button', { name: 'No hours' }),
+    expect(document.querySelectorAll('.day-card.is-unknown')).toHaveLength(1)
+    expect(document.querySelectorAll('.day-card.is-zero')).toHaveLength(
+      count - 1,
     )
-    expect(document.querySelectorAll('.day-card')).toHaveLength(count - 1)
   })
 })

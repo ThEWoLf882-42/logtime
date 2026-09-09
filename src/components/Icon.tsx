@@ -1,19 +1,9 @@
-export default function Icon({
-  name,
-}: {
-  name: 'clock' | 'arrow' | 'download' | 'sun' | 'moon' | 'refresh'
-}) {
+export default function Icon({ name }: { name: 'clock' | 'sun' | 'moon' }) {
   const paths = {
     clock: (
       <>
         <circle cx="12" cy="12" r="8" />
         <path d="M12 7v5l3 2" />
-      </>
-    ),
-    arrow: <path d="m7 17 10-10M7 7h10v10" />,
-    download: (
-      <>
-        <path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4" />
       </>
     ),
     sun: (
@@ -23,12 +13,6 @@ export default function Icon({
       </>
     ),
     moon: <path d="M20 14A8 8 0 0 1 10 4a8 8 0 1 0 10 10Z" />,
-    refresh: (
-      <>
-        <path d="M20 7v5h-5M4 17v-5h5" />
-        <path d="M6 7a7 7 0 0 1 12-1l2 6M4 12l2 6a7 7 0 0 0 12-1" />
-      </>
-    ),
   }
   return (
     <svg
