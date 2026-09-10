@@ -13,10 +13,11 @@ export default function DailyGrid({ days, today, logs, status }: Props) {
   const hoursByDate = new Map(logs.map((day) => [day.date, day.hours]))
   return (
     <div
-      className="day-grid"
+      className={`day-grid ${days.length > 32 ? 'is-long-cycle' : ''}`}
       style={
         {
           '--desktop-rows': Math.ceil(days.length / 7),
+          '--tablet-rows': Math.ceil(days.length / 6),
           '--mobile-rows': Math.ceil(days.length / 4),
         } as CSSProperties
       }
@@ -47,12 +48,12 @@ export default function DailyGrid({ days, today, logs, status }: Props) {
             : 'unknown'
         return (
           <article
-            className={`day-card is-${state} ${isToday ? 'is-today' : ''}`}
+            className={`day-card is-${state} ${label === 'Unavailable' ? 'is-unavailable' : ''} ${isToday ? 'is-today' : ''}`}
             key={key}
             aria-label={`${formatDate(day)}, ${label}${known ? `, ${hours.toFixed(1)} hours` : ''}`}
           >
             <div className="day-date">
-              <time dateTime={key}>
+              <time dateTime={key} aria-current={isToday ? 'date' : undefined}>
                 <b>{day.getUTCDate()}</b>
                 <span>{formatDate(day, { month: 'short' })}</span>
               </time>
@@ -65,7 +66,10 @@ export default function DailyGrid({ days, today, logs, status }: Props) {
                 {known ? hours.toFixed(1) : '—'}
                 {known && <span>h</span>}
               </p>
-              <span className="day-status">{label}</span>
+              <span className="day-status">
+                <i aria-hidden="true" />
+                {label}
+              </span>
             </div>
           </article>
         )

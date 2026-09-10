@@ -154,7 +154,9 @@ export default function App() {
                 ? 'Current cycle'
                 : past
                   ? 'Past cycle'
-                  : 'Upcoming cycle'}
+                  : future
+                    ? 'Upcoming cycle'
+                    : 'Previous cycle'}
             </span>
             <strong>
               {formatDate(cycle.start)} — {formatDate(cycle.end)},{' '}
@@ -196,14 +198,20 @@ export default function App() {
             <h2>
               {missing && hasData ? 'Hours loaded so far' : 'Hours logged'}
             </h2>
-            <span className="remaining">
-              {complete ? `${remaining.toFixed(1)} h remaining` : 'Remaining —'}
-            </span>
           </div>
-          <p className="total-hours">
-            {hasData ? total.toFixed(1) : '—'}
-            <span> / {target} h</span>
-          </p>
+          <div className="progress-values">
+            <p className="total-hours">
+              {hasData ? total.toFixed(1) : '—'}
+              <span> / {target} h</span>
+            </p>
+            <div className="remaining">
+              <span>Hours remaining</span>
+              <strong>
+                {complete ? remaining.toFixed(1) : '—'}
+                <small> h</small>
+              </strong>
+            </div>
+          </div>
           <div
             className="progress-track"
             role="progressbar"
@@ -272,20 +280,6 @@ export default function App() {
         </article>
       </section>
 
-      <div
-        className={`status-row ${result.status === 'error' || missing ? 'has-error' : ''}`}
-      >
-        <p role="status">{status}</p>
-        {submittedLogin && !loading && (
-          <button
-            className="text-button"
-            onClick={() => setRefresh((value) => value + 1)}
-          >
-            {result.status === 'error' || missing ? 'Retry' : 'Refresh'}
-          </button>
-        )}
-      </div>
-
       <section
         className="daily-panel"
         aria-labelledby="daily-title"
@@ -293,9 +287,28 @@ export default function App() {
       >
         <div className="daily-heading">
           <h1 id="daily-title">Daily hours</h1>
+          <div
+            className={`status-row ${result.status === 'error' || missing ? 'has-error' : ''}`}
+          >
+            <p role="status">{status}</p>
+            {submittedLogin && !loading && (
+              <button
+                className="text-button"
+                onClick={() => setRefresh((value) => value + 1)}
+              >
+                {result.status === 'error' || missing ? 'Retry' : 'Refresh'}
+              </button>
+            )}
+          </div>
+
           <p>
-            <span>{hasData ? loggedDays : '—'} days logged</span>
-            <span>{cycle.days.length} days in cycle</span>
+            <span className="logged-count">
+              <i aria-hidden="true" />
+              {hasData ? loggedDays : '—'} days logged
+            </span>
+            <span className="cycle-count">
+              {cycle.days.length} days in cycle
+            </span>
           </p>
         </div>
         <DailyGrid

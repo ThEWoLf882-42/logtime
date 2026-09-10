@@ -4,33 +4,39 @@
   font-family: 'Manrope', system-ui, sans-serif;
   font-synthesis: none;
   -webkit-font-smoothing: antialiased;
-  --bg: #f2f5f1;
-  --surface: #fcfdfa;
-  --text: #233e35;
-  --muted: #65766b;
-  --border: #d8e2d7;
-  --soft: #e6eee3;
-  --accent: #2f7855;
-  --logged: #ecf5e9;
-  --logged-border: #c2d7bd;
-  --warning: #ab542f;
-  --zero: #faf5ec;
+  --bg: #f3f5f8;
+  --surface: #ffffff;
+  --text: #202938;
+  --muted: #657084;
+  --border: #dfe4ec;
+  --soft: #f3f5f9;
+  --accent: #315fc4;
+  --logged: #f0f5ff;
+  --logged-border: #c9d9f5;
+  --future: #f6f7f9;
+  --warning: #9a622a;
+  --zero: #fff8ec;
+  --today: #315fc4;
+  --shadow: 0 2px 6px #17243b06, 0 1px 2px #17243b04;
   color: var(--text);
   background: var(--bg);
   color-scheme: light;
 }
 [data-theme='dark'] {
-  --bg: #17241e;
-  --surface: #203229;
-  --text: #e2efe4;
-  --muted: #a2b8a8;
-  --border: #374d3e;
-  --soft: #344c3a;
-  --accent: #a5d497;
-  --logged: #293f2d;
-  --logged-border: #456541;
-  --warning: #eab186;
-  --zero: #333529;
+  --bg: #131720;
+  --surface: #1c222d;
+  --text: #edf1f8;
+  --muted: #a8b3c5;
+  --border: #333c4b;
+  --soft: #252d3a;
+  --accent: #8cb6ff;
+  --logged: #222f46;
+  --logged-border: #3b547a;
+  --future: #181e28;
+  --warning: #e2b77d;
+  --zero: #302a22;
+  --today: #91b9ff;
+  --shadow: 0 2px 5px #0000000c;
   color-scheme: dark;
 }
 * {
@@ -57,10 +63,12 @@ input {
 }
 button {
   cursor: pointer;
+  transition: border-color 0.15s;
 }
 button:disabled {
-  opacity: 0.4;
+  color: var(--muted);
   cursor: default;
+  opacity: 0.55;
 }
 button:focus-visible,
 input:focus-visible {
@@ -69,49 +77,57 @@ input:focus-visible {
 }
 .app-shell {
   width: 100%;
-  max-width: 1680px;
+  max-width: 1740px;
   height: 100vh;
   height: 100dvh;
   min-height: 600px;
   margin: auto;
-  padding: 18px 24px;
+  padding: 18px 22px;
   display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   gap: 10px;
 }
+
+/* A single compact control strip, without a separate page header. */
 .controls {
   display: flex;
-  align-items: end;
+  align-items: center;
   gap: 18px;
-  padding-bottom: 5px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 .login-form {
   display: flex;
   align-items: end;
-  gap: 8px;
+  gap: 7px;
   flex: 1;
-  max-width: 400px;
-  min-width: 220px;
+  max-width: 380px;
+  min-width: 215px;
 }
 .field {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
   min-width: 0;
 }
 .field label {
   font-size: 11px;
+  font-weight: 500;
   color: var(--muted);
+  line-height: 1.2;
 }
 .field input {
-  min-width: 0;
   width: 100%;
-  height: 37px;
+  min-width: 0;
+  height: 34px;
+  padding: 7px 10px;
   border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
   border-radius: 7px;
-  padding: 8px 10px;
+  background: var(--soft);
+  color: var(--text);
   font-size: 13px;
 }
 .field input::placeholder {
@@ -121,31 +137,35 @@ input:focus-visible {
   flex: 1;
 }
 .required-field {
-  width: 100px;
+  width: 105px;
   flex-shrink: 0;
 }
+.required-field input {
+  font-variant-numeric: tabular-nums;
+}
 .primary-button {
-  height: 37px;
-  border: 1px solid #305b42;
+  height: 34px;
+  padding: 7px 14px;
+  border: 1px solid #315fc4;
   border-radius: 7px;
-  padding: 8px 13px;
+  color: #fff;
+  background: #315fc4;
   white-space: nowrap;
   font-size: 12px;
-  font-weight: 600;
-  background: #305b42;
-  color: #fff;
+  font-weight: 700;
 }
 .primary-button:hover {
-  background: #244a34;
+  background: #274eaa;
 }
 .icon-button {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   display: inline-grid;
   place-items: center;
   flex-shrink: 0;
+  padding: 0;
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: 8px;
   color: var(--text);
   background: var(--surface);
   font-size: 19px;
@@ -153,21 +173,26 @@ input:focus-visible {
 .icon-button:hover {
   background: var(--soft);
 }
+.theme-button {
+  margin-left: 2px;
+  background: var(--soft);
+}
 .cycle-control {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   margin-left: auto;
 }
 .cycle-control > div {
+  min-width: 202px;
   text-align: center;
-  min-width: 204px;
 }
 .cycle-label {
   display: block;
+  margin-bottom: 5px;
   font-size: 10px;
   color: var(--muted);
-  margin-bottom: 4px;
+  line-height: 1.2;
 }
 .cycle-control strong {
   font-size: 13px;
@@ -175,11 +200,11 @@ input:focus-visible {
 }
 .current-button,
 .text-button {
+  padding: 7px 8px;
   border: 0;
-  border-radius: 5px;
+  border-radius: 6px;
   color: var(--accent);
   background: transparent;
-  padding: 7px 5px;
   font-size: 11px;
   font-weight: 600;
 }
@@ -187,76 +212,103 @@ input:focus-visible {
 .text-button:hover {
   background: var(--soft);
 }
+
+/* Logged and remaining hours carry more weight than supporting statistics. */
 .stats-grid {
   display: grid;
-  grid-template-columns: 1.9fr 1fr 1fr 1fr;
-  gap: 12px;
+  grid-template-columns: 2.2fr 1fr 1fr 1fr;
+  gap: 10px;
 }
 .progress-card,
 .stat-card {
-  border: 1px solid var(--border);
-  background: var(--surface);
-  border-radius: 10px;
-  padding: 15px 18px;
   min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 15px 19px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 .progress-card {
-  background: #2c513b;
-  border-color: #2c513b;
-  color: #f2f6e9;
-}
-.total-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  border-color: #233650;
+  background: #233650;
+  color: #f5f8ff;
 }
 .stats-grid h2 {
   font-size: 12px;
   font-weight: 500;
+  line-height: 1.2;
   margin: 0;
   color: var(--muted);
 }
-.progress-card h2,
-.remaining {
-  color: #d3e2cc;
+.progress-card h2 {
+  color: #dbe6fa;
 }
-.remaining {
-  font-size: 10px;
+.progress-values {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin: 6px 0 12px;
 }
 .total-hours {
-  font-size: 34px;
+  margin: 0;
+  font-size: 39px;
+  line-height: 1.05;
   font-weight: 700;
-  letter-spacing: -1.2px;
-  margin: 5px 0 10px;
-  line-height: 1.2;
+  letter-spacing: -1.6px;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .total-hours > span {
   font-size: 13px;
   font-weight: 400;
-  color: #d3e2cc;
+  color: #bccce4;
   letter-spacing: 0;
 }
+.remaining {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  border-left: 1px solid #ffffff24;
+  padding-left: 20px;
+}
+.remaining > span {
+  color: #bccce4;
+  font-size: 10px;
+}
+.remaining strong {
+  font-size: 25px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.8px;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.remaining small {
+  font-size: 12px;
+  font-weight: 400;
+  color: #bccce4;
+}
 .progress-track {
-  background: #547152;
-  height: 5px;
-  border-radius: 4px;
+  height: 6px;
+  border-radius: 6px;
+  background: #ffffff26;
   overflow: hidden;
 }
 .progress-track > span {
   display: block;
   height: 100%;
-  background: #d2e5a4;
   border-radius: inherit;
+  background: #8db8ff;
 }
 .progress-caption {
   display: flex;
   justify-content: space-between;
   gap: 10px;
   font-size: 10px;
-  margin-top: 7px;
-  color: #d3e2cc;
+  margin-top: 8px;
+  color: #d4e0f3;
 }
 .stat-card {
   display: flex;
@@ -264,73 +316,129 @@ input:focus-visible {
   justify-content: space-between;
 }
 .stat-card > p {
-  margin: 5px 0;
-  font-size: 31px;
+  margin: 7px 0;
+  font-size: 35px;
   font-weight: 600;
-  letter-spacing: -0.8px;
-  line-height: 1.25;
+  letter-spacing: -1.1px;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 .stat-card > p > span {
   font-size: 13px;
   font-weight: 400;
   color: var(--muted);
+  letter-spacing: 0;
 }
 .stat-card small {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
+  line-height: 1.25;
 }
 .status-row {
-  min-height: 22px;
+  min-height: 21px;
+  padding: 0 3px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 10px;
 }
 .status-row p {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   color: var(--muted);
   font-size: 11px;
-  line-height: 1.5;
+  line-height: 1.4;
   margin: 0;
   overflow-wrap: anywhere;
+}
+.status-row p::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--accent);
 }
 .status-row.has-error p {
   color: var(--warning);
 }
+.status-row.has-error p::before {
+  background: var(--warning);
+}
 .status-row .text-button {
-  padding-block: 3px;
+  padding-block: 2px;
   flex-shrink: 0;
 }
+
+/* The daily grid fills the rest of the available screen. */
 .daily-panel {
   display: flex;
   flex-direction: column;
   min-height: 0;
   gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 .daily-heading {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding: 0 2px;
+}
+.daily-heading .status-row {
+  min-width: 0;
+  margin-left: 9px;
+}
+.daily-heading .status-row p {
+  font-size: 10px;
+}
+.daily-heading > p {
+  padding-left: 12px;
+  border-left: 1px solid var(--border);
 }
 .daily-heading h1 {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.4px;
   margin: 0;
+  font-size: 19px;
+  line-height: 1.3;
+  font-weight: 700;
+  letter-spacing: -0.6px;
 }
-.daily-heading p {
+.daily-heading > p {
   display: flex;
-  gap: 18px;
+  gap: 14px;
+  align-items: center;
   margin: 0;
   color: var(--muted);
   font-size: 11px;
+}
+.logged-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.logged-count i {
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+}
+.cycle-count {
+  padding: 4px 8px;
+  border-radius: 5px;
+  background: var(--soft);
+  font-size: 10px;
 }
 .day-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   grid-template-rows: repeat(var(--desktop-rows), minmax(0, 1fr));
-  gap: 9px;
+  gap: 8px;
   flex: 1;
   min-height: 0;
 }
@@ -339,25 +447,33 @@ input:focus-visible {
   flex-direction: column;
   justify-content: space-between;
   min-width: 0;
-  padding: clamp(8px, 1.2vh, 15px) 14px;
+  padding: 10px 12px;
   border: 1px solid var(--border);
+  border-radius: 8px;
   background: var(--surface);
-  border-radius: 9px;
+  line-height: 1.15;
 }
 .day-card.is-logged {
-  background: var(--logged);
   border-color: var(--logged-border);
+  background: var(--logged);
 }
 .day-card.is-zero {
   background: var(--zero);
 }
-.day-card.is-future {
-  background: transparent;
+.day-card.is-unavailable {
+  border-color: var(--warning);
   border-style: dashed;
 }
+.is-unavailable .day-status {
+  color: var(--warning);
+}
+.day-card.is-future {
+  background: var(--future);
+  border-color: transparent;
+}
 .day-card.is-today {
-  border-color: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--accent);
+  border-color: var(--today);
+  box-shadow: inset 0 0 0 1px var(--today);
 }
 .day-date {
   display: flex;
@@ -371,18 +487,25 @@ input:focus-visible {
   gap: 5px;
 }
 .day-date b {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 600;
-  letter-spacing: -0.6px;
+  letter-spacing: -0.3px;
 }
-.day-date time > span,
-.day-weekday {
-  font-size: 10px;
+.day-date time > span {
   color: var(--muted);
+  font-size: 11px;
 }
 .day-weekday {
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.is-today .day-weekday {
+  color: var(--surface);
+  background: var(--today);
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 600;
 }
 .day-bottom {
   display: flex;
@@ -391,23 +514,36 @@ input:focus-visible {
   gap: 5px;
 }
 .day-hours {
-  font-size: clamp(20px, 2.5vh, 28px);
+  margin: 0;
+  color: var(--text);
+  font-size: clamp(23px, 2.6vh, 31px);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.7px;
-  margin: 0;
+  letter-spacing: -0.9px;
+  line-height: 1.1;
   white-space: nowrap;
 }
 .day-hours > span {
   margin-left: 3px;
-  font-size: 11px;
   color: var(--muted);
+  font-size: 12px;
   font-weight: 400;
+  letter-spacing: 0;
 }
 .day-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
   text-align: right;
+}
+.day-status i {
+  width: 4px;
+  height: 4px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: currentColor;
 }
 .is-logged .day-status {
   color: var(--accent);
@@ -417,76 +553,101 @@ input:focus-visible {
 }
 .is-future .day-hours {
   color: var(--muted);
+  font-size: 22px;
+  font-weight: 400;
 }
-@media (max-width: 1100px) {
+.is-future .day-status i,
+.is-unknown .day-status i {
+  display: none;
+}
+@media (max-width: 1150px) {
   .app-shell {
-    padding: 14px 18px;
+    padding: 12px;
   }
   .controls {
     gap: 12px;
   }
+  .required-field {
+    width: 94px;
+  }
   .cycle-control {
-    gap: 8px;
+    gap: 6px;
   }
   .cycle-control > div {
-    min-width: 180px;
+    min-width: 175px;
   }
   .cycle-control strong {
     font-size: 12px;
-  }
-  .required-field {
-    width: 88px;
-  }
-  .stats-grid {
-    grid-template-columns: 1.8fr 1fr 1fr 1fr;
-    gap: 9px;
   }
   .progress-card,
   .stat-card {
     padding: 13px;
   }
+  .remaining {
+    padding-left: 12px;
+  }
+  .total-hours {
+    font-size: 34px;
+  }
   .day-card {
-    padding-inline: 10px;
+    padding-inline: 9px;
   }
-  .day-bottom {
-    align-items: start;
-    flex-direction: column;
-    gap: 0;
-  }
-  .day-hours {
-    font-size: 22px;
-  }
-  .day-date b {
-    font-size: 18px;
+  .day-status {
+    font-size: 9px;
   }
 }
 @media (max-width: 900px) {
   .controls {
-    flex-wrap: wrap;
-    align-items: end;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 95px 34px;
+    gap: 9px 12px;
   }
   .login-form {
     max-width: none;
-    flex-basis: calc(100% - 158px);
     min-width: 0;
   }
   .required-field {
-    order: 1;
+    width: auto;
   }
   .theme-button {
-    order: 2;
+    grid-column: 3;
+    grid-row: 1;
+    align-self: end;
+    margin: 0;
   }
   .cycle-control {
-    order: 3;
+    grid-column: 1 / -1;
     width: 100%;
     justify-content: center;
     margin: 0;
   }
+  .stats-grid {
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 7px;
+  }
   .stats-grid h2 {
     font-size: 11px;
   }
+  .total-hours {
+    font-size: 29px;
+  }
+  .total-hours > span {
+    font-size: 11px;
+  }
   .remaining {
-    font-size: 9px;
+    padding-left: 7px;
+  }
+  .remaining > span {
+    font-size: 8px;
+  }
+  .remaining strong {
+    font-size: 21px;
+  }
+  .stat-card > p {
+    font-size: 29px;
+  }
+  .stat-card small {
+    font-size: 10px;
   }
   .day-grid {
     gap: 6px;
@@ -494,14 +655,21 @@ input:focus-visible {
   .day-card {
     padding: 7px;
   }
+  .day-date b {
+    font-size: 14px;
+  }
+  .day-date time > span,
   .day-weekday {
     font-size: 9px;
   }
-  .day-date b {
-    font-size: 16px;
+  .day-status {
+    font-size: 8px;
   }
-  .day-date time > span {
-    font-size: 9px;
+  .day-status i {
+    display: none;
+  }
+  .day-hours {
+    font-size: 23px;
   }
 }
 @media (min-width: 601px) and (max-height: 720px) {
@@ -509,48 +677,107 @@ input:focus-visible {
     padding-block: 10px;
     gap: 7px;
   }
+  .controls {
+    padding-block: 7px;
+  }
   .progress-card,
   .stat-card {
     padding-block: 10px;
   }
+  .progress-values {
+    margin: 4px 0 8px;
+  }
   .total-hours {
-    font-size: 29px;
-    margin: 3px 0 7px;
+    font-size: 33px;
   }
   .stat-card > p {
-    font-size: 27px;
+    font-size: 29px;
   }
   .daily-panel {
-    gap: 7px;
+    padding: 10px;
+    gap: 8px;
+  }
+  .daily-heading h1 {
+    font-size: 17px;
   }
   .day-card {
-    padding-block: 5px;
+    padding-block: 6px;
   }
   .day-date b {
-    font-size: 16px;
+    font-size: 14px;
   }
   .day-hours {
-    font-size: 20px;
-  }
-  .day-bottom {
-    flex-direction: row;
-    align-items: baseline;
+    font-size: 23px;
   }
   .day-status {
-    font-size: 8px;
+    font-size: 9px;
   }
 }
+
+@media (max-width: 900px) {
+  .daily-heading {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 10px;
+  }
+  .daily-heading .status-row {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    margin-left: 0;
+    padding: 0;
+  }
+  .daily-heading > p {
+    border-left: 0;
+    padding-left: 0;
+  }
+}
+@media (min-width: 601px) and (max-width: 800px) {
+  .stats-grid {
+    grid-template-columns: 2.5fr 1fr 1fr 1fr;
+  }
+  .progress-values {
+    gap: 8px;
+  }
+  .progress-card,
+  .stat-card {
+    padding-inline: 10px;
+  }
+  .day-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-rows: repeat(var(--tablet-rows), minmax(0, 1fr));
+  }
+  .day-hours {
+    font-size: 24px;
+  }
+  .is-logged .day-status {
+    font-size: 0;
+  }
+  .is-logged .day-status i {
+    display: block;
+    width: 5px;
+    height: 5px;
+  }
+  .day-card.is-unknown .day-hours {
+    display: none;
+  }
+  .day-card.is-unknown .day-status {
+    font-size: 10px;
+  }
+  .is-future .day-hours {
+    font-size: 18px;
+  }
+}
+
 @media (max-width: 600px) {
   .app-shell {
-    padding: 10px;
-    gap: 7px;
     min-height: 740px;
+    padding: 8px;
+    gap: 7px;
   }
   .controls {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 85px 32px;
+    padding: 8px;
+    grid-template-columns: minmax(0, 1fr) 80px 30px;
     gap: 8px;
-    padding: 0;
+    border-radius: 10px;
   }
   .login-form {
     gap: 5px;
@@ -559,32 +786,21 @@ input:focus-visible {
     font-size: 10px;
   }
   .field input {
+    height: 32px;
+    padding: 6px;
     font-size: 16px;
-    height: 34px;
-    padding: 7px;
   }
   .primary-button {
-    height: 34px;
-    font-size: 10px;
+    height: 32px;
     padding: 6px 8px;
-  }
-  .required-field {
-    width: auto;
-    order: 0;
-  }
-  .theme-button {
-    order: 0;
-    grid-column: 3;
-    grid-row: 1;
+    font-size: 10px;
   }
   .icon-button {
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
   }
   .cycle-control {
-    grid-column: 1 / -1;
-    order: 0;
-    gap: 9px;
+    gap: 8px;
   }
   .cycle-control > div {
     flex: 1;
@@ -592,12 +808,13 @@ input:focus-visible {
   }
   .cycle-label {
     font-size: 9px;
-    margin-bottom: 2px;
+    margin-bottom: 3px;
   }
   .cycle-control strong {
     font-size: 11px;
   }
   .current-button {
+    padding-inline: 2px;
     font-size: 10px;
   }
   .stats-grid {
@@ -606,58 +823,86 @@ input:focus-visible {
   }
   .progress-card {
     grid-column: 1 / -1;
-    padding: 9px 12px;
+    padding: 10px 13px;
+    border-radius: 10px;
+  }
+  .progress-values {
+    margin: 3px 0 8px;
   }
   .total-hours {
-    font-size: 28px;
-    margin: 2px 0 7px;
-  }
-  .total-heading h2 {
-    font-size: 11px;
+    font-size: 32px;
   }
   .total-hours > span {
     font-size: 12px;
   }
+  .remaining {
+    padding-left: 17px;
+  }
+  .remaining > span {
+    font-size: 9px;
+  }
+  .remaining strong {
+    font-size: 23px;
+  }
   .progress-caption {
     margin-top: 6px;
-  }
-  .remaining {
-    font-size: 10px;
+    font-size: 9px;
   }
   .stat-card {
     padding: 7px 9px;
-    border-radius: 7px;
+    border-radius: 8px;
   }
   .stat-card h2 {
     font-size: 10px;
   }
   .stat-card > p {
-    font-size: 21px;
-    margin: 2px 0;
-    line-height: 1.1;
+    font-size: 23px;
+    margin: 4px 0;
   }
   .stat-card > p > span {
     font-size: 10px;
   }
   .stat-card small {
     font-size: 8px;
-    line-height: 1.25;
   }
   .status-row {
-    min-height: 20px;
+    min-height: 18px;
   }
   .status-row p {
     font-size: 10px;
   }
+  .status-row p::before {
+    width: 4px;
+    height: 4px;
+  }
+  .status-row .text-button {
+    font-size: 10px;
+  }
   .daily-panel {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
     gap: 7px;
   }
   .daily-heading h1 {
-    font-size: 15px;
+    font-size: 16px;
   }
   .daily-heading p {
-    gap: 9px;
     font-size: 9px;
+    gap: 8px;
+  }
+  .logged-count {
+    gap: 4px;
+  }
+  .logged-count i {
+    width: 4px;
+    height: 4px;
+  }
+  .cycle-count {
+    padding: 3px 5px;
+    font-size: 8px;
   }
   .day-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -665,9 +910,8 @@ input:focus-visible {
     gap: 5px;
   }
   .day-card {
-    padding: 4px 7px;
-    border-radius: 6px;
-    line-height: 1.15;
+    padding: 5px 7px;
+    border-radius: 7px;
   }
   .day-date {
     gap: 3px;
@@ -676,35 +920,51 @@ input:focus-visible {
     gap: 3px;
   }
   .day-date b {
-    font-size: 13px;
+    font-size: 12px;
   }
-  .day-date time > span {
-    font-size: 8px;
-  }
+  .day-date time > span,
   .day-weekday {
     font-size: 8px;
-    letter-spacing: 0;
   }
-  .day-bottom {
-    flex-direction: row;
-    align-items: baseline;
-    gap: 3px;
+  .is-today .day-weekday {
+    padding: 2px 3px;
+    font-size: 7px;
   }
   .day-hours {
-    font-size: 17px;
+    font-size: 19px;
   }
   .day-hours > span {
     font-size: 9px;
-    margin-left: 1px;
+    margin-left: 2px;
+  }
+  .day-bottom {
+    gap: 3px;
   }
   .day-status {
     font-size: 7px;
-    line-height: 1.2;
+  }
+  .is-logged .day-status {
+    font-size: 0;
+  }
+  .is-logged .day-status i {
+    display: block;
+    width: 5px;
+    height: 5px;
+  }
+  .is-future .day-hours {
+    font-size: 18px;
   }
 }
 @media (max-width: 360px) {
+  .day-grid.is-long-cycle {
+    row-gap: 2px;
+  }
+  .is-long-cycle .day-card {
+    padding-block: 1px;
+  }
   .controls {
-    grid-template-columns: minmax(0, 1fr) 74px 32px;
+    padding: 7px;
+    grid-template-columns: minmax(0, 1fr) 72px 28px;
     gap: 6px;
   }
   .primary-button {
@@ -714,16 +974,27 @@ input:focus-visible {
   .required-field label {
     font-size: 9px;
   }
+  .icon-button {
+    width: 28px;
+    height: 30px;
+  }
   .day-card {
-    padding-inline: 5px;
+    padding: 3px 5px;
+  }
+  .day-date time > span,
+  .day-weekday {
+    font-size: 7px;
   }
   .day-status {
     font-size: 6px;
   }
-  .day-weekday {
-    font-size: 7px;
+  .day-hours {
+    font-size: 18px;
   }
-  .day-date time > span {
+  .stat-card {
+    padding: 6px 7px;
+  }
+  .stat-card small {
     font-size: 7px;
   }
 }

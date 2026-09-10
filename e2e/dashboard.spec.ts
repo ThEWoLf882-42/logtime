@@ -25,17 +25,27 @@ test('check progress, keep every day visible, and save preferences', async ({
   )
   await expect(page.getByRole('progressbar')).toHaveAttribute(
     'aria-valuetext',
-    '24.0 of 100 hours',
+    '28.0 of 100 hours',
   )
-  await expect(page.locator('.remaining')).toContainText('76.0')
-  await expect(page.locator('.day-card')).toHaveCount(31)
-  await expect(page.locator('.day-card.is-logged')).toHaveCount(12)
+  await expect(page.locator('.remaining')).toContainText('72.0')
+  await expect(page.locator('.day-card')).toHaveCount(33)
+  await expect(page.locator('.day-card.is-logged')).toHaveCount(14)
   await expect(page.locator('.day-card.is-future')).toHaveCount(19)
   await expect(page.locator('header')).toHaveCount(0)
-  await page.getByLabel('Required hours').fill('24')
+  await page.getByLabel('Required hours').fill('28')
   await expect(page.getByText('Requirement met', { exact: true })).toBeVisible()
   await expect(page.locator('.remaining')).toContainText('0.0')
   await page.getByLabel('Required hours').fill('150')
+  // Include zero, short, and long sessions in visual checks.
+  await page.route('**/api/get_log', (route) => {
+    const day = new Date(route.request().postDataJSON().startDate).getUTCDate()
+    const hours = [0, 3.5, 6.2, 8.4, 10.1, 4.7, 0, 7.3, 5.8, 2.5][day % 10]
+    return route.fulfill({ json: { hours } })
+  })
+  await page.getByRole('button', { name: 'Refresh' }).click()
+  await expect(page.getByRole('status')).toContainText(
+    'Loaded for test-student',
+  )
   await page.screenshot({
     path: 'test-results/dashboard-desktop.png',
     fullPage: true,
@@ -61,9 +71,9 @@ test('mobile cycle navigation and layout', async ({ page }) => {
     'Loaded for test-student',
   )
   await page.getByRole('button', { name: 'Previous cycle' }).click()
-  await expect(page.locator('.cycle-control')).toContainText('Jul 29 — Aug 28')
+  await expect(page.locator('.cycle-control')).toContainText('Jul 27 — Aug 28')
   await page.getByRole('button', { name: 'Back to current cycle' }).click()
-  await expect(page.locator('.cycle-control')).toContainText('Aug 29 — Sep 28')
+  await expect(page.locator('.cycle-control')).toContainText('Aug 27 — Sep 28')
   await expect(page.getByRole('status')).toContainText(
     'Loaded for test-student',
   )
@@ -102,7 +112,7 @@ test('partial failures and recovery do not invent missing hours', async ({
   await expect(page.getByRole('status')).toContainText('1 day unavailable')
   await expect(page.getByRole('progressbar')).toHaveAttribute(
     'aria-valuetext',
-    '22.0 of 100 hours, partial data',
+    '26.0 of 100 hours, partial data',
   )
   await expect(page.locator('.remaining')).toContainText('—')
   await expect(
@@ -112,7 +122,7 @@ test('partial failures and recovery do not invent missing hours', async ({
   await page.getByRole('button', { name: 'Retry' }).click()
   await expect(page.getByRole('progressbar')).toHaveAttribute(
     'aria-valuetext',
-    '24.0 of 100 hours',
+    '28.0 of 100 hours',
   )
   await page.getByRole('button', { name: 'Next cycle' }).click()
   await expect(page.getByRole('status')).toContainText(
@@ -127,7 +137,11 @@ test('partial failures and recovery do not invent missing hours', async ({
 test('all daily cards fit the viewport and dark background fills the page', async ({
   page,
 }) => {
+  await page.route('**/api/get_log', (route) =>
+    route.fulfill({ json: { hours: 10.5 } }),
+  )
   await page.goto('/')
+  await page.getByLabel('Required hours').fill('999')
   await page.getByLabel('Your campus login').fill('test-student')
   await page.getByRole('button', { name: 'Check hours' }).click()
   await expect(page.getByRole('status')).toContainText(
@@ -138,6 +152,10 @@ test('all daily cards fit the viewport and dark background fills the page', asyn
     [1366, 768],
     [1280, 720],
     [1024, 600],
+    [768, 1024],
+    [820, 1180],
+    [880, 660],
+    [601, 740],
     [375, 812],
     [320, 740],
   ]) {
@@ -146,7 +164,11 @@ test('all daily cards fit the viewport and dark background fills the page', asyn
       pageFits:
         document.documentElement.scrollHeight <= window.innerHeight &&
         document.documentElement.scrollWidth <= window.innerWidth,
-      cardsFit: [...document.querySelectorAll('.day-card')].every((card) => {
+      cardsFit: [
+        ...document.querySelectorAll(
+          '.day-card, .stat-card, .progress-card, .controls',
+        ),
+      ].every((card) => {
         const rect = card.getBoundingClientRect()
         return (
           rect.bottom <= window.innerHeight &&
@@ -170,5 +192,5 @@ test('all daily cards fit the viewport and dark background fills the page', asyn
     ].map((element) => getComputedStyle(element).backgroundColor),
   )
   expect(new Set(backgrounds).size).toBe(1)
-  expect(backgrounds[0]).toBe('rgb(23, 36, 30)')
+  expect(backgrounds[0]).toBe('rgb(19, 23, 32)')
 })

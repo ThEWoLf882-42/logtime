@@ -27,17 +27,17 @@ export function currentMonth(today: Date) {
   return new Date(
     Date.UTC(
       today.getUTCFullYear(),
-      today.getUTCMonth() - (today.getUTCDate() <= 28 ? 1 : 0),
+      today.getUTCMonth() - (today.getUTCDate() < 27 ? 1 : 0),
       1,
     ),
   )
 }
 
 export function getCycle(month: Date) {
-  // In a non-leap February, the nominal 29th becomes March 1. Keep the
-  // month anchor separate so navigation never skips this shorter cycle.
+  // Inclusive 27th–28th periods overlap on the next month's 27th and 28th.
+  // The current period switches to the newly starting cycle on the 27th.
   const start = new Date(
-    Date.UTC(month.getUTCFullYear(), month.getUTCMonth(), 29),
+    Date.UTC(month.getUTCFullYear(), month.getUTCMonth(), 27),
   )
   const end = new Date(
     Date.UTC(month.getUTCFullYear(), month.getUTCMonth() + 1, 28),

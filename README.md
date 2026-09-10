@@ -31,7 +31,7 @@ Browser tests start the development server if needed. Screenshots are saved in t
 
 ## Cycle and data
 
-Cycles run from the 29th through the following month's 28th. After a non-leap February, the next cycle is March 1–28. Today follows the Casablanca calendar; browser time zones do not shift dates.
+Cycles run from the 27th through the following month's 28th, inclusive. Consecutive periods overlap on the 27th and 28th; the current period switches on the 27th. Today follows the Casablanca calendar; browser time zones do not shift dates.
 
 The default API is `https://logtime-med.1337.ma/api/get_log`. To use a compatible endpoint, set `VITE_LOGTIME_API_URL` in `.env` (see `.env.example`). The endpoint must allow browser CORS requests.
 
