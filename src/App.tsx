@@ -35,15 +35,19 @@ export default function App() {
   const result = useLogs(submittedLogin, month, today, refresh)
   const loading = result.status === 'loading'
   const missing = result.logs.filter((day) => day.hours === null).length
-  const hasData =
-    result.status === 'ready' && result.logs.some((day) => day.hours !== null)
-  const complete = hasData && missing === 0
-  const total = result.logs.reduce((sum, day) => sum + (day.hours ?? 0), 0)
+  const hasData = result.total !== null
+  const hasDailyData = result.logs.some((day) => day.hours !== null)
+  const total = result.total ?? 0
   const remaining = Math.max(target - total, 0)
   const progress = Math.min((total / target) * 100, 100)
   const isCurrent = dateKey(month) === dateKey(currentMonth(today))
   const past = cycle.end < today
   const future = cycle.start > today
+  const totalFailed =
+    !future &&
+    !hasData &&
+    (result.status === 'ready' || result.status === 'error')
+  const hasError = totalFailed || missing > 0 || result.status === 'error'
   const daysLeft = cycle.days.filter((day) => day >= today).length
 
   useEffect(() => {
@@ -77,11 +81,13 @@ export default function App() {
   let status = 'Enter your campus login to check your hours.'
   if (loading)
     status = `Loading ${result.completed} of ${cycle.days.filter((day) => day <= today).length} days…`
-  else if (result.status === 'error')
+  else if (totalFailed && !hasDailyData)
     status =
       'Couldn’t load your hours. Check your login and connection, then retry.'
+  else if (totalFailed)
+    status = 'Cycle total unavailable. Retry to load your progress.'
   else if (missing)
-    status = `${missing} ${missing === 1 ? 'day' : 'days'} unavailable. The total is incomplete.`
+    status = `${missing} ${missing === 1 ? 'day' : 'days'} unavailable. Cycle total loaded.`
   else if (result.status === 'ready')
     status = future
       ? 'This cycle hasn’t started.'
@@ -195,9 +201,7 @@ export default function App() {
       >
         <article className="progress-card">
           <div className="total-heading">
-            <h2>
-              {missing && hasData ? 'Hours loaded so far' : 'Hours logged'}
-            </h2>
+            <h2>Hours logged</h2>
           </div>
           <div className="progress-values">
             <p className="total-hours">
@@ -207,7 +211,7 @@ export default function App() {
             <div className="remaining">
               <span>Hours remaining</span>
               <strong>
-                {complete ? remaining.toFixed(1) : '—'}
+                {hasData ? remaining.toFixed(1) : '—'}
                 <small> h</small>
               </strong>
             </div>
@@ -221,7 +225,7 @@ export default function App() {
             aria-valuenow={hasData ? Math.round(progress) : undefined}
             aria-valuetext={
               hasData
-                ? `${total.toFixed(1)} of ${target} hours${missing ? ', partial data' : ''}`
+                ? `${total.toFixed(1)} of ${target} hours`
                 : 'No data loaded'
             }
           >
@@ -229,12 +233,12 @@ export default function App() {
           </div>
           <div className="progress-caption">
             <span>
-              {complete
+              {hasData
                 ? remaining === 0
                   ? 'Requirement met'
                   : `${Math.round((total / target) * 100)}% complete`
-                : hasData
-                  ? 'Partial total'
+                : totalFailed
+                  ? 'Total unavailable'
                   : 'No hours loaded yet'}
             </span>
             <span>
@@ -249,7 +253,7 @@ export default function App() {
         <article className="stat-card">
           <h2>Daily average</h2>
           <p>
-            {complete ? average.toFixed(1) : '—'}
+            {hasData ? average.toFixed(1) : '—'}
             <span> h</span>
           </p>
           <small>{elapsed} started days</small>
@@ -267,7 +271,7 @@ export default function App() {
         <article className="stat-card">
           <h2>Needed per day</h2>
           <p>
-            {complete && !past && !future ? needed.toFixed(1) : '—'}
+            {hasData && !past && !future ? needed.toFixed(1) : '—'}
             <span> h</span>
           </p>
           <small>
@@ -287,16 +291,14 @@ export default function App() {
       >
         <div className="daily-heading">
           <h1 id="daily-title">Daily hours</h1>
-          <div
-            className={`status-row ${result.status === 'error' || missing ? 'has-error' : ''}`}
-          >
+          <div className={`status-row ${hasError ? 'has-error' : ''}`}>
             <p role="status">{status}</p>
             {submittedLogin && !loading && (
               <button
                 className="text-button"
                 onClick={() => setRefresh((value) => value + 1)}
               >
-                {result.status === 'error' || missing ? 'Retry' : 'Refresh'}
+                {hasError ? 'Retry' : 'Refresh'}
               </button>
             )}
           </div>
@@ -304,7 +306,7 @@ export default function App() {
           <p>
             <span className="logged-count">
               <i aria-hidden="true" />
-              {hasData ? loggedDays : '—'} days logged
+              {hasDailyData ? loggedDays : '—'} days logged
             </span>
             <span className="cycle-count">
               {cycle.days.length} days in cycle

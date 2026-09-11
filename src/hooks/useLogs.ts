@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { loadCycle, type DayLog } from '../lib/api'
+import { loadCycle, loadCycleTotal, type DayLog } from '../lib/api'
 import { dateKey, getCycle } from '../lib/calendar'
 
 type Result = {
   key: string
   logs: DayLog[]
+  total: number | null
   status: 'idle' | 'loading' | 'ready' | 'error'
   completed: number
   updated: Date | null
@@ -12,6 +13,7 @@ type Result = {
 const empty: Result = {
   key: '',
   logs: [],
+  total: null,
   status: 'idle',
   completed: 0,
   updated: null,
@@ -41,17 +43,25 @@ export function useLogs(
       return
     }
     const controller = new AbortController()
-    const days = getCycle(month).days.filter((day) => day <= today)
+    const cycle = getCycle(month)
+    const days = cycle.days.filter((day) => day <= today)
     setResult({ ...empty, key, status: 'loading' })
-    loadCycle(login, days, controller.signal, (completed) => {
-      if (!controller.signal.aborted)
-        setResult((previous) => ({ ...previous, completed }))
-    })
-      .then((logs) => {
+    const totalRequest = days.length
+      ? loadCycleTotal(login, cycle.start, cycle.end, controller.signal)
+      : Promise.resolve(null)
+    Promise.all([
+      loadCycle(login, days, controller.signal, (completed) => {
+        if (!controller.signal.aborted)
+          setResult((previous) => ({ ...previous, completed }))
+      }),
+      totalRequest,
+    ])
+      .then(([logs, total]) => {
         if (controller.signal.aborted) return
         const next: Result = {
           key,
           logs,
+          total,
           status:
             logs.length > 0 && logs.every((log) => log.hours === null)
               ? 'error'
@@ -59,7 +69,7 @@ export function useLogs(
           completed: days.length,
           updated: new Date(),
         }
-        if (logs.every((log) => log.hours !== null)) {
+        if (total !== null && logs.every((log) => log.hours !== null)) {
           if (cache.current.size >= 12)
             cache.current.delete(cache.current.keys().next().value!)
           cache.current.set(key, next)

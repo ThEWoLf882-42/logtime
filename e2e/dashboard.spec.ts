@@ -3,7 +3,19 @@ import { expect, test } from '@playwright/test'
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-09-09T12:00:00Z'))
   await page.route('**/api/get_log', (route) =>
-    route.fulfill({ json: { 'hydra:member': [{ totalHours: 2 }] } }),
+    route.fulfill({
+      json: {
+        'hydra:member': [
+          {
+            totalHours:
+              route.request().postDataJSON().startDate ===
+              route.request().postDataJSON().endDate
+                ? 2
+                : 42,
+          },
+        ],
+      },
+    }),
   )
 })
 
@@ -25,19 +37,22 @@ test('check progress, keep every day visible, and save preferences', async ({
   )
   await expect(page.getByRole('progressbar')).toHaveAttribute(
     'aria-valuetext',
-    '26.0 of 100 hours',
+    '42.0 of 100 hours',
   )
-  await expect(page.locator('.remaining')).toContainText('74.0')
+  await expect(page.locator('.remaining')).toContainText('58.0')
   await expect(page.locator('.day-card')).toHaveCount(31)
   await expect(page.locator('.day-card.is-logged')).toHaveCount(13)
   await expect(page.locator('.day-card.is-future')).toHaveCount(18)
   await expect(page.locator('header')).toHaveCount(0)
-  await page.getByLabel('Required hours').fill('26')
+  await page.getByLabel('Required hours').fill('42')
   await expect(page.getByText('Requirement met', { exact: true })).toBeVisible()
   await expect(page.locator('.remaining')).toContainText('0.0')
   await page.getByLabel('Required hours').fill('150')
   // Include zero, short, and long sessions in visual checks.
   await page.route('**/api/get_log', (route) => {
+    const { startDate, endDate } = route.request().postDataJSON()
+    if (startDate !== endDate)
+      return route.fulfill({ json: { totalHours: 65.1 } })
     const day = new Date(route.request().postDataJSON().startDate).getUTCDate()
     const hours = [0, 3.5, 6.2, 8.4, 10.1, 4.7, 0, 7.3, 5.8, 2.5][day % 10]
     return route.fulfill({ json: { hours } })
@@ -104,7 +119,16 @@ test('partial failures and recovery do not invent missing hours', async ({
       route.request().postDataJSON().startDate.startsWith('2026-09-01')
     )
       await route.fulfill({ status: 503, body: 'Unavailable' })
-    else await route.fulfill({ json: { hours: 2 } })
+    else
+      await route.fulfill({
+        json: {
+          hours:
+            route.request().postDataJSON().startDate ===
+            route.request().postDataJSON().endDate
+              ? 2
+              : 42,
+        },
+      })
   })
   await page.goto('/')
   await page.getByLabel('Your campus login').fill('test-student')
@@ -112,9 +136,9 @@ test('partial failures and recovery do not invent missing hours', async ({
   await expect(page.getByRole('status')).toContainText('1 day unavailable')
   await expect(page.getByRole('progressbar')).toHaveAttribute(
     'aria-valuetext',
-    '24.0 of 100 hours, partial data',
+    '42.0 of 100 hours',
   )
-  await expect(page.locator('.remaining')).toContainText('—')
+  await expect(page.locator('.remaining')).toContainText('58.0')
   await expect(
     page.locator('.day-status').filter({ hasText: /^Unavailable$/ }),
   ).toHaveCount(1)
@@ -122,7 +146,7 @@ test('partial failures and recovery do not invent missing hours', async ({
   await page.getByRole('button', { name: 'Retry' }).click()
   await expect(page.getByRole('progressbar')).toHaveAttribute(
     'aria-valuetext',
-    '26.0 of 100 hours',
+    '42.0 of 100 hours',
   )
   await page.getByRole('button', { name: 'Next cycle' }).click()
   await expect(page.getByRole('status')).toContainText(
@@ -138,7 +162,15 @@ test('all daily cards fit the viewport and dark background fills the page', asyn
   page,
 }) => {
   await page.route('**/api/get_log', (route) =>
-    route.fulfill({ json: { hours: 10.5 } }),
+    route.fulfill({
+      json: {
+        hours:
+          route.request().postDataJSON().startDate ===
+          route.request().postDataJSON().endDate
+            ? 10.5
+            : 136.5,
+      },
+    }),
   )
   await page.goto('/')
   await page.getByLabel('Required hours').fill('999')

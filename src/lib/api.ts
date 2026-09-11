@@ -47,6 +47,77 @@ export function extractHours(payload: unknown): number {
   throw new Error('Unsupported API response')
 }
 
+// A range response must contain an aggregate, never a list we sum locally.
+export function extractTotalHours(payload: unknown): number {
+  if (typeof payload === 'number' || typeof payload === 'string')
+    return parseHours(payload)
+  if (Array.isArray(payload)) {
+    if (payload.length === 0) return 0
+    if (payload.length === 1) return extractTotalHours(payload[0])
+    throw new Error('Expected a single cycle total')
+  }
+  if (!payload || typeof payload !== 'object')
+    throw new Error('Unsupported API response')
+  const row = payload as Record<string, unknown>
+  for (const key of [
+    'totalHours',
+    'hours',
+    'hour',
+    'duration',
+    'logtime',
+    'time',
+  ]) {
+    if (row[key] !== undefined) return parseHours(row[key])
+  }
+  for (const key of ['data', 'logs', 'hydra:member']) {
+    if (row[key] !== undefined) return extractTotalHours(row[key])
+  }
+  throw new Error('Unsupported API response')
+}
+
+async function requestHours(
+  login: string,
+  start: Date,
+  end: Date,
+  signal: AbortSignal,
+  extract: (payload: unknown) => number,
+): Promise<number | null> {
+  signal.throwIfAborted()
+  const controller = new AbortController()
+  const abort = () => controller.abort()
+  signal.addEventListener('abort', abort, { once: true })
+  const timeout = window.setTimeout(abort, 15000)
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      body: JSON.stringify({
+        login,
+        startDate: formatApiDate(start),
+        endDate: formatApiDate(end),
+      }),
+    })
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    return extract(await response.json())
+  } catch {
+    signal.throwIfAborted()
+    return null
+  } finally {
+    window.clearTimeout(timeout)
+    signal.removeEventListener('abort', abort)
+  }
+}
+
+export function loadCycleTotal(
+  login: string,
+  start: Date,
+  end: Date,
+  signal: AbortSignal,
+) {
+  return requestHours(login, start, end, signal, extractTotalHours)
+}
+
 export async function loadCycle(
   login: string,
   days: Date[],
@@ -61,29 +132,9 @@ export async function loadCycle(
       signal.throwIfAborted()
       const index = cursor++
       const date = days[index]
-      const controller = new AbortController()
-      const abort = () => controller.abort()
-      signal.addEventListener('abort', abort, { once: true })
-      const timeout = window.setTimeout(abort, 15000)
-      try {
-        const apiDate = formatApiDate(date)
-        const response = await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: controller.signal,
-          body: JSON.stringify({ login, startDate: apiDate, endDate: apiDate }),
-        })
-        if (!response.ok) throw new Error(`HTTP ${response.status}`)
-        results[index] = {
-          date: dateKey(date),
-          hours: extractHours(await response.json()),
-        }
-      } catch {
-        signal.throwIfAborted()
-        results[index] = { date: dateKey(date), hours: null }
-      } finally {
-        window.clearTimeout(timeout)
-        signal.removeEventListener('abort', abort)
+      results[index] = {
+        date: dateKey(date),
+        hours: await requestHours(login, date, date, signal, extractHours),
       }
       onProgress(++completed)
     }

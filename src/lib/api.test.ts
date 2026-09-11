@@ -1,5 +1,43 @@
 import { describe, expect, it, vi } from 'vitest'
-import { extractHours, loadCycle } from './api'
+import {
+  extractHours,
+  extractTotalHours,
+  loadCycle,
+  loadCycleTotal,
+} from './api'
+
+describe('cycle total', () => {
+  it('requests the full 28th–27th range and reads the API aggregate', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ 'hydra:member': [{ totalHours: '42.5' }] }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    expect(
+      await loadCycleTotal(
+        'student',
+        new Date('2026-08-28'),
+        new Date('2026-09-27'),
+        new AbortController().signal,
+      ),
+    ).toBe(42.5)
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      login: 'student',
+      startDate: '2026-08-27T23:00:00.000Z',
+      endDate: '2026-09-26T23:00:00.000Z',
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+  it('prefers an explicit aggregate and never adds daily records for a total', () => {
+    expect(
+      extractTotalHours({ totalHours: 42, logs: [{ hours: 2 }, { hours: 3 }] }),
+    ).toBe(42)
+    expect(extractTotalHours({ 'hydra:member': [{ totalHours: 0 }] })).toBe(0)
+    expect(() =>
+      extractTotalHours({ logs: [{ hours: 2 }, { hours: 3 }] }),
+    ).toThrow()
+  })
+})
 
 describe('API normalization', () => {
   it.each([
