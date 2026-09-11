@@ -25,14 +25,14 @@ test('check progress, keep every day visible, and save preferences', async ({
   )
   await expect(page.getByRole('progressbar')).toHaveAttribute(
     'aria-valuetext',
-    '28.0 of 100 hours',
+    '26.0 of 100 hours',
   )
-  await expect(page.locator('.remaining')).toContainText('72.0')
-  await expect(page.locator('.day-card')).toHaveCount(33)
-  await expect(page.locator('.day-card.is-logged')).toHaveCount(14)
-  await expect(page.locator('.day-card.is-future')).toHaveCount(19)
+  await expect(page.locator('.remaining')).toContainText('74.0')
+  await expect(page.locator('.day-card')).toHaveCount(31)
+  await expect(page.locator('.day-card.is-logged')).toHaveCount(13)
+  await expect(page.locator('.day-card.is-future')).toHaveCount(18)
   await expect(page.locator('header')).toHaveCount(0)
-  await page.getByLabel('Required hours').fill('28')
+  await page.getByLabel('Required hours').fill('26')
   await expect(page.getByText('Requirement met', { exact: true })).toBeVisible()
   await expect(page.locator('.remaining')).toContainText('0.0')
   await page.getByLabel('Required hours').fill('150')
@@ -71,9 +71,9 @@ test('mobile cycle navigation and layout', async ({ page }) => {
     'Loaded for test-student',
   )
   await page.getByRole('button', { name: 'Previous cycle' }).click()
-  await expect(page.locator('.cycle-control')).toContainText('Jul 27 — Aug 28')
+  await expect(page.locator('.cycle-control')).toContainText('Jul 28 — Aug 27')
   await page.getByRole('button', { name: 'Back to current cycle' }).click()
-  await expect(page.locator('.cycle-control')).toContainText('Aug 27 — Sep 28')
+  await expect(page.locator('.cycle-control')).toContainText('Aug 28 — Sep 27')
   await expect(page.getByRole('status')).toContainText(
     'Loaded for test-student',
   )
@@ -112,7 +112,7 @@ test('partial failures and recovery do not invent missing hours', async ({
   await expect(page.getByRole('status')).toContainText('1 day unavailable')
   await expect(page.getByRole('progressbar')).toHaveAttribute(
     'aria-valuetext',
-    '26.0 of 100 hours, partial data',
+    '24.0 of 100 hours, partial data',
   )
   await expect(page.locator('.remaining')).toContainText('—')
   await expect(
@@ -122,7 +122,7 @@ test('partial failures and recovery do not invent missing hours', async ({
   await page.getByRole('button', { name: 'Retry' }).click()
   await expect(page.getByRole('progressbar')).toHaveAttribute(
     'aria-valuetext',
-    '28.0 of 100 hours',
+    '26.0 of 100 hours',
   )
   await page.getByRole('button', { name: 'Next cycle' }).click()
   await expect(page.getByRole('status')).toContainText(

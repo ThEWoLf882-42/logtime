@@ -49,7 +49,7 @@ describe('dashboard', () => {
     )
     expect(screen.getByRole('progressbar')).toHaveAttribute(
       'aria-valuetext',
-      '28.0 of 100 hours',
+      '26.0 of 100 hours',
     )
   })
   it('prevents an old login response from overwriting a newer one', async () => {

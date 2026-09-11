@@ -9,36 +9,37 @@ import {
   shiftMonth,
 } from './calendar'
 
-describe('27th–28th calendar', () => {
+describe('28th–27th calendar', () => {
   it('selects the correct cycle at the rollover', () => {
     expect(dateKey(currentMonth(new Date('2026-09-26')))).toBe('2026-08-01')
-    expect(dateKey(currentMonth(new Date('2026-09-27')))).toBe('2026-09-01')
+    expect(dateKey(currentMonth(new Date('2026-09-27')))).toBe('2026-08-01')
     expect(dateKey(currentMonth(new Date('2026-09-28')))).toBe('2026-09-01')
     expect(dateKey(currentMonth(new Date('2026-01-01')))).toBe('2025-12-01')
   })
   it('starts in February even in non-leap years', () => {
     const month = new Date('2026-01-01')
     const next = shiftMonth(month, 1)
-    expect(dateKey(getCycle(next).start)).toBe('2026-02-27')
-    expect(dateKey(getCycle(next).end)).toBe('2026-03-28')
+    expect(dateKey(getCycle(next).start)).toBe('2026-02-28')
+    expect(dateKey(getCycle(next).end)).toBe('2026-03-27')
+    expect(getCycle(next).days).toHaveLength(28)
     expect(dateKey(shiftMonth(next, -1))).toBe(dateKey(month))
   })
   it('includes leap day', () => {
     const cycle = getCycle(new Date('2024-02-01'))
-    expect(dateKey(cycle.start)).toBe('2024-02-27')
+    expect(dateKey(cycle.start)).toBe('2024-02-28')
     expect(cycle.days.map(dateKey)).toContain('2024-02-29')
-    expect(cycle.days).toHaveLength(31)
+    expect(cycle.days).toHaveLength(29)
   })
-  it('includes both endpoints and overlaps the next period by two days', () => {
+  it('includes both endpoints with no gaps or overlap between periods', () => {
     for (let index = 0; index < 60; index++) {
       const month = shiftMonth(new Date('2023-01-01'), index)
       const cycle = getCycle(month)
-      expect(dateKey(addDays(cycle.end, -1))).toBe(
+      expect(dateKey(addDays(cycle.end, 1))).toBe(
         dateKey(getCycle(shiftMonth(month, 1)).start),
       )
       expect(new Set(cycle.days.map(dateKey)).size).toBe(cycle.days.length)
       expect(cycle.days.map(dateKey).at(-1)).toBe(dateKey(cycle.end))
-      for (const day of cycle.days.slice(0, -2))
+      for (const day of cycle.days)
         expect(dateKey(currentMonth(day))).toBe(dateKey(month))
     }
   })

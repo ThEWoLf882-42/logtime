@@ -27,20 +27,19 @@ export function currentMonth(today: Date) {
   return new Date(
     Date.UTC(
       today.getUTCFullYear(),
-      today.getUTCMonth() - (today.getUTCDate() < 27 ? 1 : 0),
+      today.getUTCMonth() - (today.getUTCDate() < 28 ? 1 : 0),
       1,
     ),
   )
 }
 
 export function getCycle(month: Date) {
-  // Inclusive 27th–28th periods overlap on the next month's 27th and 28th.
-  // The current period switches to the newly starting cycle on the 27th.
+  // Inclusive 28th–27th periods cover consecutive days without overlap.
   const start = new Date(
-    Date.UTC(month.getUTCFullYear(), month.getUTCMonth(), 27),
+    Date.UTC(month.getUTCFullYear(), month.getUTCMonth(), 28),
   )
   const end = new Date(
-    Date.UTC(month.getUTCFullYear(), month.getUTCMonth() + 1, 28),
+    Date.UTC(month.getUTCFullYear(), month.getUTCMonth() + 1, 27),
   )
   const count = Math.round((end.getTime() - start.getTime()) / 86400000) + 1
   return {
