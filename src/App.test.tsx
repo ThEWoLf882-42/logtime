@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import App from './App'
 
@@ -125,10 +125,14 @@ describe('dashboard', () => {
   })
   it('keeps daily hours when the total fails and never falls back to their sum', async () => {
     let failTotal = true
+    let dailyRequests = 0
+    let totalRequests = 0
     vi.stubGlobal(
       'fetch',
       vi.fn(async (_url, options) => {
         const { startDate, endDate } = JSON.parse(options.body)
+        if (startDate === endDate) dailyRequests++
+        else totalRequests++
         if (startDate !== endDate && failTotal) return { ok: false }
         return {
           ok: true,
@@ -158,6 +162,113 @@ describe('dashboard', () => {
       expect(screen.getByRole('progressbar')).toHaveAttribute(
         'aria-valuetext',
         '42.0 of 100 hours',
+      ),
+    )
+    expect(dailyRequests).toBe(13)
+    expect(totalRequests).toBe(2)
+  })
+  it('shows the API total and individual days while another day is still loading', async () => {
+    let resolveDay!: (value: unknown) => void
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url, options) => {
+        const { startDate, endDate } = JSON.parse(options.body)
+        if (startDate === endDate && startDate.startsWith('2026-08-27'))
+          return new Promise((resolve) => {
+            resolveDay = resolve
+          })
+        return {
+          ok: true,
+          json: async () => ({ totalHours: startDate === endDate ? 2 : 42 }),
+        }
+      }),
+    )
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Your campus login'), {
+      target: { value: 'student' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /Check hours/ }))
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'Loading 12 of 13 days',
+      ),
+    )
+    expect(screen.getByRole('progressbar')).toHaveAttribute(
+      'aria-valuetext',
+      '42.0 of 100 hours',
+    )
+    expect(screen.getByRole('progressbar')).toHaveAttribute(
+      'aria-busy',
+      'false',
+    )
+    expect(document.querySelectorAll('.day-card.is-logged')).toHaveLength(12)
+    expect(
+      document.querySelector('.day-card.is-logged .day-status'),
+    ).toHaveTextContent('Logged')
+    await act(async () =>
+      resolveDay({ ok: true, json: async () => ({ hours: 4 }) }),
+    )
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'Loaded for student',
+      ),
+    )
+    expect(document.querySelectorAll('.day-card.is-logged')).toHaveLength(13)
+  })
+  it('retries only a failed day while retaining the API total and successful zero-hour days', async () => {
+    let retry = false
+    let resolveDay!: (value: unknown) => void
+    const fetchMock = vi.fn(async (_url, options) => {
+      const { startDate, endDate } = JSON.parse(options.body)
+      if (startDate === endDate && startDate.startsWith('2026-08-27')) {
+        if (!retry) return { ok: false }
+        return new Promise((resolve) => {
+          resolveDay = resolve
+        })
+      }
+      return {
+        ok: true,
+        json: async () => ({ totalHours: startDate === endDate ? 0 : 42 }),
+      }
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Your campus login'), {
+      target: { value: 'student' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /Check hours/ }))
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('1 day unavailable'),
+    )
+    expect(fetchMock).toHaveBeenCalledTimes(14)
+    retry = true
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(fetchMock).toHaveBeenCalledTimes(15)
+    expect(document.querySelectorAll('.day-card.is-zero')).toHaveLength(12)
+    expect(
+      document.querySelector('.day-card.is-zero .day-status'),
+    ).toHaveTextContent('No hours')
+    expect(screen.getByRole('progressbar')).toHaveAttribute(
+      'aria-valuetext',
+      '42.0 of 100 hours',
+    )
+    await act(async () =>
+      resolveDay({ ok: true, json: async () => ({ hours: 3 }) }),
+    )
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'Loaded for student',
+      ),
+    )
+    expect(document.querySelectorAll('.day-card.is-logged')).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(29))
+    await act(async () =>
+      resolveDay({ ok: true, json: async () => ({ hours: 4 }) }),
+    )
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'Loaded for student',
       ),
     )
   })

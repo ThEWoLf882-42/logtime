@@ -1,5 +1,24 @@
-export default function Icon({ name }: { name: 'clock' | 'sun' | 'moon' }) {
+export default function Icon({
+  name,
+}: {
+  name: 'clock' | 'sun' | 'moon' | 'average' | 'spark' | 'target'
+}) {
   const paths = {
+    average: (
+      <>
+        <path d="M5 17V12M12 17V7M19 17V3M3 21h18" />
+      </>
+    ),
+    spark: (
+      <path d="m12 2 2.8 7.2L22 12l-7.2 2.8L12 22l-2.8-7.2L2 12l7.2-2.8Z" />
+    ),
+    target: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <circle cx="12" cy="12" r="5" />
+        <circle cx="12" cy="12" r="1" />
+      </>
+    ),
     clock: (
       <>
         <circle cx="12" cy="12" r="8" />

@@ -22,17 +22,10 @@ export default function App() {
   )
   const [targetInput, setTargetInput] = useState(String(target))
   const [dark, setDark] = useState(
-    () =>
-      readSetting(
-        'theme',
-        window.matchMedia('(prefers-color-scheme: dark)').matches
-          ? 'dark'
-          : 'light',
-      ) === 'dark',
+    () => readSetting('theme', 'dark') === 'dark',
   )
-  const [refresh, setRefresh] = useState(0)
   const cycle = useMemo(() => getCycle(month), [month])
-  const result = useLogs(submittedLogin, month, today, refresh)
+  const result = useLogs(submittedLogin, month, today)
   const loading = result.status === 'loading'
   const missing = result.logs.filter((day) => day.hours === null).length
   const hasData = result.total !== null
@@ -43,10 +36,7 @@ export default function App() {
   const isCurrent = dateKey(month) === dateKey(currentMonth(today))
   const past = cycle.end < today
   const future = cycle.start > today
-  const totalFailed =
-    !future &&
-    !hasData &&
-    (result.status === 'ready' || result.status === 'error')
+  const totalFailed = result.totalStatus === 'error'
   const hasError = totalFailed || missing > 0 || result.status === 'error'
   const daysLeft = cycle.days.filter((day) => day >= today).length
 
@@ -63,6 +53,9 @@ export default function App() {
   }, [])
   useEffect(() => {
     document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', dark ? '#111716' : '#eff1e9')
     saveSetting('theme', dark ? 'dark' : 'light')
   }, [dark])
   useEffect(() => {
@@ -75,7 +68,7 @@ export default function App() {
     if (!next) return
     saveSetting('lastLogin', next)
     setSubmittedLogin(next)
-    setRefresh((value) => value + 1)
+    result.reload()
   }
 
   let status = 'Enter your campus login to check your hours.'
@@ -194,32 +187,13 @@ export default function App() {
         </button>
       </section>
 
-      <section
-        className="stats-grid"
-        aria-label="Monthly progress"
-        aria-busy={loading}
-      >
+      <section className="stats-grid" aria-label="Monthly progress">
         <article className="progress-card">
-          <div className="total-heading">
-            <h2>Hours logged</h2>
-          </div>
-          <div className="progress-values">
-            <p className="total-hours">
-              {hasData ? total.toFixed(1) : '—'}
-              <span> / {target} h</span>
-            </p>
-            <div className="remaining">
-              <span>Hours remaining</span>
-              <strong>
-                {hasData ? remaining.toFixed(1) : '—'}
-                <small> h</small>
-              </strong>
-            </div>
-          </div>
           <div
-            className="progress-track"
+            className={`progress-ring ${result.totalStatus === 'loading' ? 'is-loading' : ''}`}
             role="progressbar"
             aria-label="Monthly hours progress"
+            aria-busy={result.totalStatus === 'loading'}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={hasData ? Math.round(progress) : undefined}
@@ -229,10 +203,38 @@ export default function App() {
                 : 'No data loaded'
             }
           >
-            <span style={{ width: `${hasData ? progress : 0}%` }} />
+            <svg viewBox="0 0 200 200" aria-hidden="true">
+              <circle className="ring-guide" cx="100" cy="100" r="97" />
+              <circle className="ring-track" cx="100" cy="100" r="86" />
+              <circle
+                className="ring-fill"
+                cx="100"
+                cy="100"
+                r="86"
+                pathLength="100"
+                strokeDasharray="100"
+                strokeDashoffset={100 - (hasData ? progress : 0)}
+              />
+            </svg>
+            <div className="ring-content">
+              <span className="ring-label">Hours logged</span>
+              <p className="total-hours">{hasData ? total.toFixed(1) : '—'}</p>
+              <span className="ring-target">of {target} h</span>
+            </div>
           </div>
-          <div className="progress-caption">
-            <span>
+          <div className="progress-details">
+            <p className="eyebrow">Your monthly progress</p>
+            <div className="remaining">
+              <strong>
+                {hasData ? remaining.toFixed(1) : '—'}
+                <small> h</small>
+              </strong>
+              <span>Hours remaining</span>
+            </div>
+            <div
+              className={`completion-badge ${hasData && remaining === 0 ? 'is-complete' : ''}`}
+            >
+              <i aria-hidden="true" />
               {hasData
                 ? remaining === 0
                   ? 'Requirement met'
@@ -240,8 +242,9 @@ export default function App() {
                 : totalFailed
                   ? 'Total unavailable'
                   : 'No hours loaded yet'}
-            </span>
-            <span>
+            </div>
+            <span className="days-left">
+              <Icon name="clock" />
               {past
                 ? 'Cycle ended'
                 : future
@@ -251,6 +254,9 @@ export default function App() {
           </div>
         </article>
         <article className="stat-card">
+          <span className="stat-symbol" aria-hidden="true">
+            <Icon name="average" />
+          </span>
           <h2>Daily average</h2>
           <p>
             {hasData ? average.toFixed(1) : '—'}
@@ -259,16 +265,24 @@ export default function App() {
           <small>{elapsed} started days</small>
         </article>
         <article className="stat-card">
+          <span className="stat-symbol" aria-hidden="true">
+            <Icon name="spark" />
+          </span>
           <h2>Best day</h2>
           <p>
             {best ? best.hours!.toFixed(1) : '—'}
             <span> h</span>
           </p>
           <small>
-            {best ? formatDate(new Date(best.date)) : 'No logged hours yet'}
+            {best
+              ? `${formatDate(new Date(best.date))}${missing || loading ? ' · loaded days' : ''}`
+              : 'No logged hours yet'}
           </small>
         </article>
         <article className="stat-card">
+          <span className="stat-symbol" aria-hidden="true">
+            <Icon name="target" />
+          </span>
           <h2>Needed per day</h2>
           <p>
             {hasData && !past && !future ? needed.toFixed(1) : '—'}
@@ -296,7 +310,7 @@ export default function App() {
             {submittedLogin && !loading && (
               <button
                 className="text-button"
-                onClick={() => setRefresh((value) => value + 1)}
+                onClick={() => result.reload(hasError ? 'retry' : 'refresh')}
               >
                 {hasError ? 'Retry' : 'Refresh'}
               </button>
@@ -314,6 +328,7 @@ export default function App() {
           </p>
         </div>
         <DailyGrid
+          key={dateKey(month)}
           days={cycle.days}
           today={today}
           logs={result.logs}

@@ -65,6 +65,11 @@ test('check progress, keep every day visible, and save preferences', async ({
     path: 'test-results/dashboard-desktop.png',
     fullPage: true,
   })
+  await page.getByRole('button', { name: 'Switch to light mode' }).click()
+  await page.screenshot({
+    path: 'test-results/dashboard-light.png',
+    fullPage: true,
+  })
   await page.getByRole('button', { name: 'Switch to dark mode' }).click()
   await page.screenshot({
     path: 'test-results/dashboard-dark.png',
@@ -167,7 +172,9 @@ test('all daily cards fit the viewport and dark background fills the page', asyn
         hours:
           route.request().postDataJSON().startDate ===
           route.request().postDataJSON().endDate
-            ? 10.5
+            ? route.request().postDataJSON().startDate.startsWith('2026-09-01')
+              ? 0
+              : 10.5
             : 136.5,
       },
     }),
@@ -192,30 +199,44 @@ test('all daily cards fit the viewport and dark background fills the page', asyn
     [320, 740],
   ]) {
     await page.setViewportSize({ width, height })
+    await page.emulateMedia({ reducedMotion: 'reduce' })
     const layout = await page.evaluate(() => ({
       pageFits:
         document.documentElement.scrollHeight <= window.innerHeight &&
         document.documentElement.scrollWidth <= window.innerWidth,
-      cardsFit: [
+      overflowingCards: [
         ...document.querySelectorAll(
           '.day-card, .stat-card, .progress-card, .controls',
         ),
-      ].every((card) => {
+      ].flatMap((card) => {
         const rect = card.getBoundingClientRect()
-        return (
+        const fits =
           rect.bottom <= window.innerHeight &&
           rect.top >= 0 &&
           card.scrollHeight <= card.clientHeight &&
           card.scrollWidth <= card.clientWidth
-        )
+        return fits
+          ? []
+          : [
+              {
+                card: card.className,
+                text: card.textContent,
+                width: card.clientWidth,
+                scrollWidth: card.scrollWidth,
+                height: card.clientHeight,
+                scrollHeight: card.scrollHeight,
+                top: rect.top,
+                bottom: rect.bottom,
+              },
+            ]
       }),
     }))
     expect(layout, width + 'x' + height).toEqual({
       pageFits: true,
-      cardsFit: true,
+      overflowingCards: [],
     })
   }
-  await page.getByRole('button', { name: 'Switch to dark mode' }).click()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   const backgrounds = await page.evaluate(() =>
     [
       document.documentElement,
@@ -224,5 +245,64 @@ test('all daily cards fit the viewport and dark background fills the page', asyn
     ].map((element) => getComputedStyle(element).backgroundColor),
   )
   expect(new Set(backgrounds).size).toBe(1)
-  expect(backgrounds[0]).toBe('rgb(19, 23, 32)')
+  expect(backgrounds[0]).toBe('rgb(17, 23, 22)')
+})
+
+test('empty and failed states fit, keyboard controls work, and motion can be disabled', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.route('**/api/get_log', (route) =>
+    route.fulfill({ status: 503, body: 'Unavailable' }),
+  )
+  await page.setViewportSize({ width: 320, height: 740 })
+  await page.goto('/')
+  await page.keyboard.press('Tab')
+  await expect(page.getByLabel('Your campus login')).toBeFocused()
+  await page.keyboard.type('test-student')
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('status')).toContainText('Couldn’t load')
+  await expect(page.getByRole('progressbar')).toHaveAttribute(
+    'aria-valuetext',
+    'No data loaded',
+  )
+  for (const theme of ['dark', 'light']) {
+    if (theme === 'light')
+      await page.getByRole('button', { name: 'Switch to light mode' }).click()
+    for (const [width, height] of [
+      [320, 740],
+      [375, 812],
+      [1024, 600],
+    ]) {
+      await page.setViewportSize({ width, height })
+      expect(
+        await page.evaluate(() => ({
+          fits:
+            document.documentElement.scrollHeight <= innerHeight &&
+            document.documentElement.scrollWidth <= innerWidth,
+          noAnimation:
+            getComputedStyle(document.querySelector('.day-grid')!)
+              .animationName === 'none',
+          noRingTransition:
+            getComputedStyle(document.querySelector('.ring-fill')!)
+              .transitionDuration === '0s',
+          cardsFit: [
+            ...document.querySelectorAll(
+              '.day-card, .progress-card, .stat-card',
+            ),
+          ].every(
+            (card) =>
+              card.scrollWidth <= card.clientWidth &&
+              card.scrollHeight <= card.clientHeight,
+          ),
+        })),
+        `${theme} ${width}x${height}`,
+      ).toEqual({
+        fits: true,
+        noAnimation: true,
+        noRingTransition: true,
+        cardsFit: true,
+      })
+    }
+  }
 })

@@ -84,7 +84,10 @@ describe('daily requests', () => {
       progress,
     )
     expect(result.map((row) => row.hours)).toEqual([3, null, 0])
-    expect(progress).toHaveBeenLastCalledWith(3)
+    expect(progress).toHaveBeenLastCalledWith(3, {
+      date: '2026-09-03',
+      hours: 0,
+    })
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
       login: 'student',
       startDate: '2026-08-31T23:00:00.000Z',

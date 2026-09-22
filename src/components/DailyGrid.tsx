@@ -13,7 +13,7 @@ export default function DailyGrid({ days, today, logs, status }: Props) {
   const hoursByDate = new Map(logs.map((day) => [day.date, day.hours]))
   return (
     <div
-      className={`day-grid ${days.length > 32 ? 'is-long-cycle' : ''}`}
+      className="day-grid"
       style={
         {
           '--desktop-rows': Math.ceil(days.length / 7),
@@ -30,15 +30,17 @@ export default function DailyGrid({ days, today, logs, status }: Props) {
         const isToday = key === dateKey(today)
         const label = future
           ? 'Upcoming'
-          : status === 'loading'
-            ? 'Loading'
-            : known
-              ? hours > 0
-                ? 'Logged'
-                : 'No hours'
-              : status === 'idle'
-                ? 'Not loaded'
-                : 'Unavailable'
+          : known
+            ? hours > 0
+              ? 'Logged'
+              : 'No hours'
+            : hours === null
+              ? 'Unavailable'
+              : status === 'loading'
+                ? 'Loading'
+                : status === 'idle'
+                  ? 'Not loaded'
+                  : 'Unavailable'
         const state = future
           ? 'future'
           : known
@@ -50,6 +52,13 @@ export default function DailyGrid({ days, today, logs, status }: Props) {
           <article
             className={`day-card is-${state} ${label === 'Unavailable' ? 'is-unavailable' : ''} ${isToday ? 'is-today' : ''}`}
             key={key}
+            style={
+              {
+                '--intensity': known ? Math.min(hours / 12, 1) : 0,
+              } as CSSProperties
+            }
+            data-date={key}
+            aria-busy={label === 'Loading'}
             aria-label={`${formatDate(day)}, ${label}${known ? `, ${hours.toFixed(1)} hours` : ''}`}
           >
             <div className="day-date">
@@ -70,6 +79,9 @@ export default function DailyGrid({ days, today, logs, status }: Props) {
                 <i aria-hidden="true" />
                 {label}
               </span>
+            </div>
+            <div className="day-meter" aria-hidden="true">
+              <span />
             </div>
           </article>
         )

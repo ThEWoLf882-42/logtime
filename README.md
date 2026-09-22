@@ -13,7 +13,9 @@ npm run dev
 
 Enter your login, set your required hours (100 by default), and select **Check hours**. The page shows every day in the selected cycle, alongside logged hours, hours remaining, progress, daily average, best day, and hours needed per day. Use the arrows to check another cycle. There is no header or collapsed breakdown; the daily grid is always visible.
 
-Your login, required hours, and theme are remembered in this browser. A saved login is only sent after you select **Check hours**. Hour records are kept in memory.
+The charcoal-and-mint dashboard puts logged hours inside a progress ring, with remaining hours beside it. Daily card shading and small activity bars reflect hours logged (capped visually at 12 hours, while the number always shows the full value). Today has a clear outline; zero-hour, upcoming, and unavailable days have distinct labels. Subtle loading and cycle transitions respect reduced-motion preferences. A light theme is also available.
+
+Your login, required hours, and theme are remembered in this browser. New visitors start in dark mode; saved theme choices are respected. A saved login is only sent after you select **Check hours**. Hour records are kept in memory.
 
 The layout fills the viewport and fits without scrolling at common desktop sizes and portrait phone sizes of at least 740px height. Shorter viewports and increased browser zoom can scroll so content stays accessible. Light and dark backgrounds cover the entire page.
 
@@ -37,10 +39,10 @@ The default API is `https://logtime-med.1337.ma/api/get_log`. To use a compatibl
 
 Each started day is requested by POST with `login`, `startDate`, and `endDate`. The date selectors preserve the original integration: both use the previous day at 23:00 UTC. For example, September 9 uses `2026-09-08T23:00:00.000Z`. This convention still needs verification against the service's specification, particularly during Ramadan; live account totals have not been independently verified.
 
-The cycle total is requested separately using the cycle's 28th as `startDate` and the following month's 27th as `endDate`, with the same date-selector convention. Progress, remaining hours, daily average, and needed hours use this API total; the browser never sums daily cards to calculate or replace it. Failed daily requests do not affect the total. If the total request fails, daily cards remain available and progress shows unavailable until retry succeeds.
+The cycle total is requested separately using the cycle's 28th as `startDate` and the following month's 27th as `endDate`, with the same date-selector convention. The total appears as soon as it arrives, and daily cards fill in individually. Progress, remaining hours, daily average, and needed hours use this API total; the browser never sums daily cards to calculate or replace it. Failed daily requests do not affect the total. If the total request fails, daily cards remain available and progress shows unavailable until retry succeeds.
 
 Responses may contain arrays or `data`, `logs`, or `hydra:member` wrappers. Hour fields include `hours`, `hour`, `duration`, `logtime`, `time`, and `totalHours`. Numeric values are interpreted as hours; decimal strings and `HH:MM[:SS]` durations are also supported. Empty arrays are zero hours. The cycle response must supply one aggregate value or record, with `totalHours` taking priority; multiple records without an aggregate are rejected instead of summed. Invalid responses and failed requests are marked unavailable.
 
-Daily requests run four at a time alongside one cycle-total request. Each request times out after 15 seconds and cancels when the login or cycle changes. Complete results are cached in memory for one minute (up to 12 entries). **Refresh** bypasses the cache; **Retry** reloads the cycle. Future days are not requested individually, and upcoming cycles make no requests.
+Daily requests run four at a time alongside one cycle-total request. Each request times out after 15 seconds and cancels when the login or cycle changes. Complete results are cached in memory for one minute (up to 12 entries). **Refresh** bypasses the cache and reloads all data; **Retry** requests only unavailable days or the failed total, keeping successful values visible. Future days are not requested individually, and upcoming cycles make no requests.
 
 The UI is in `src/App.tsx`, request handling in `src/hooks/useLogs.ts`, and API/calendar helpers in `src/lib/`.
