@@ -251,11 +251,10 @@ export default function App() {
             className="current-button"
             disabled={isCurrent}
             onClick={() => setMonth(currentMonth(today))}
-            aria-label="Back to current cycle"
             aria-keyshortcuts="T"
             title="Back to current cycle (T)"
           >
-            Today
+            Today<span className="sr-only">: back to current cycle</span>
           </button>
         </div>
         <button

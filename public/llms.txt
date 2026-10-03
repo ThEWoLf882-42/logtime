@@ -1,0 +1,9 @@
+# Logtime
+
+> A single-page dashboard where 1337 MED students check their monthly logged campus hours against their required hours.
+
+Enter a campus login and the required hours (100 by default), then select **Check hours**. Cycles run from the 28th through the following month's 27th. The page shows the cycle total, hours remaining, pace against an even split of the goal, daily average, best day, hours needed per day, and every day of the cycle. Hours come from the campus logtime API; the site stores only the login, required hours, and theme in the browser.
+
+## Pages
+
+- [Dashboard](/): check logged hours for any cycle

@@ -29,7 +29,7 @@ npx playwright install chromium
 npm run test:e2e       # Desktop/mobile flows with mocked API responses
 ```
 
-Browser tests start the development server if needed. Screenshots are saved in the ignored `test-results/` directory. Deploy `dist/` to a static host to share the website.
+Browser tests start the development server if needed. Screenshots are saved in the ignored `test-results/` directory. Deploy `dist/` to a static host to share the website. Fonts are self-hosted from `@fontsource` packages, so no third-party stylesheet delays the first paint. `public/` provides `robots.txt` and `llms.txt`; configure the host to return 404 for missing files rather than rewriting every path to `index.html`, which crawlers and Lighthouse would misread.
 
 ## Cycle and data
 
