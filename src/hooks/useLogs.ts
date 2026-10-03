@@ -49,10 +49,21 @@ export function useLogs(
     const totalRequest = days.length
       ? loadCycleTotal(login, cycle.start, cycle.end, controller.signal)
       : Promise.resolve(null)
+    // Partial results are shown as they arrive; the final result replaces them.
+    totalRequest
+      .then((total) => {
+        if (!controller.signal.aborted && total !== null)
+          setResult((previous) => ({ ...previous, total }))
+      })
+      .catch(() => {})
     Promise.all([
-      loadCycle(login, days, controller.signal, (completed) => {
+      loadCycle(login, days, controller.signal, (completed, log) => {
         if (!controller.signal.aborted)
-          setResult((previous) => ({ ...previous, completed }))
+          setResult((previous) => ({
+            ...previous,
+            completed,
+            logs: [...previous.logs, log],
+          }))
       }),
       totalRequest,
     ])

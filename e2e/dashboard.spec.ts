@@ -224,5 +224,5 @@ test('all daily cards fit the viewport and dark background fills the page', asyn
     ].map((element) => getComputedStyle(element).backgroundColor),
   )
   expect(new Set(backgrounds).size).toBe(1)
-  expect(backgrounds[0]).toBe('rgb(19, 23, 32)')
+  expect(backgrounds[0]).toBe('rgb(13, 12, 18)')
 })

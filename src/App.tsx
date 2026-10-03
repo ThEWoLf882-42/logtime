@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import Icon from './components/Icon'
+import Icon, { Mark } from './components/Icon'
+import Dial from './components/Dial'
 import DailyGrid from './components/DailyGrid'
 import { useLogs } from './hooks/useLogs'
 import {
@@ -10,6 +11,7 @@ import {
   getCycle,
   shiftMonth,
 } from './lib/calendar'
+import { describeDays } from './lib/days'
 import { readSetting, saveSetting, validTarget } from './lib/storage'
 
 export default function App() {
@@ -31,8 +33,14 @@ export default function App() {
       ) === 'dark',
   )
   const [refresh, setRefresh] = useState(0)
+  // The day under the pointer, shared by the dial and the grid.
+  const [active, setActive] = useState<string | null>(null)
   const cycle = useMemo(() => getCycle(month), [month])
   const result = useLogs(submittedLogin, month, today, refresh)
+  const days = useMemo(
+    () => describeDays(cycle.days, today, result.logs, result.status),
+    [cycle.days, today, result.logs, result.status],
+  )
   const loading = result.status === 'loading'
   const missing = result.logs.filter((day) => day.hours === null).length
   const hasData = result.total !== null
@@ -68,6 +76,26 @@ export default function App() {
   useEffect(() => {
     saveSetting('target', String(target))
   }, [target])
+  useEffect(() => {
+    // Arrow keys move between cycles and T returns to today, outside fields.
+    function onKey(event: KeyboardEvent) {
+      if (event.altKey || event.ctrlKey || event.metaKey) return
+      if (
+        event.target instanceof Element &&
+        event.target.closest('input, textarea, select, [contenteditable]')
+      )
+        return
+      if (event.key === 'ArrowLeft') setMonth((value) => shiftMonth(value, -1))
+      else if (event.key === 'ArrowRight')
+        setMonth((value) => shiftMonth(value, 1))
+      else if (event.key === 't' || event.key === 'T')
+        setMonth(currentMonth(today))
+      else return
+      event.preventDefault()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [today])
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -78,9 +106,9 @@ export default function App() {
     setRefresh((value) => value + 1)
   }
 
+  const started = cycle.days.filter((day) => day <= today).length
   let status = 'Enter your campus login to check your hours.'
-  if (loading)
-    status = `Loading ${result.completed} of ${cycle.days.filter((day) => day <= today).length} days…`
+  if (loading) status = `Loading ${result.completed} of ${started} days…`
   else if (totalFailed && !hasDailyData)
     status =
       'Couldn’t load your hours. Check your login and connection, then retry.'
@@ -93,20 +121,48 @@ export default function App() {
       ? 'This cycle hasn’t started.'
       : `Loaded for ${submittedLogin}`
 
-  const elapsed = cycle.days.filter((day) => day <= today).length
+  const elapsed = started
   const average = elapsed ? total / elapsed : 0
   const needed = daysLeft ? remaining / daysLeft : 0
   const best = result.logs
     .filter((day) => (day.hours ?? 0) > 0)
     .sort((a, b) => b.hours! - a.hours!)[0]
   const loggedDays = result.logs.filter((day) => (day.hours ?? 0) > 0).length
+  // Pace compares the total with the goal spread evenly, up to mid-today.
+  const pace =
+    hasData && !past && !future && remaining > 0
+      ? total - (target * (elapsed - 0.5)) / cycle.days.length
+      : null
+  const paceText =
+    pace === null
+      ? null
+      : Math.abs(pace) < 0.5
+        ? 'On pace'
+        : `${Math.abs(pace).toFixed(1)} h ${pace > 0 ? 'ahead of' : 'behind'} pace`
+  const neededNote = past
+    ? 'Cycle ended'
+    : future
+      ? 'Cycle not started'
+      : !hasData
+        ? 'Including today'
+        : remaining === 0
+          ? 'Goal reached'
+          : needed > average
+            ? `${(needed - average).toFixed(1)} h above average`
+            : 'Under your average'
 
   return (
     <main className="app-shell">
       <section className="controls" aria-label="Logtime controls">
+        <div className="brand" aria-hidden="true">
+          <Mark />
+          <span>logtime</span>
+        </div>
         <form className="login-form" onSubmit={submit}>
           <div className="field login-field">
-            <label htmlFor="login">Your campus login</label>
+            <label htmlFor="login">
+              <span className="sr-only">Your campus </span>login
+            </label>
             <input
               id="login"
               required
@@ -116,15 +172,18 @@ export default function App() {
               spellCheck={false}
               value={login}
               onChange={(event) => setLogin(event.target.value)}
-              placeholder="Your login"
+              placeholder="your-login"
             />
           </div>
           <button className="primary-button" type="submit">
             {loading ? 'Load again' : 'Check hours'}
+            <Icon name="enter" size={16} />
           </button>
         </form>
         <div className="field required-field">
-          <label htmlFor="target">Required hours</label>
+          <label htmlFor="target">
+            Required<span className="sr-only"> hours</span>
+          </label>
           <input
             id="target"
             type="number"
@@ -145,42 +204,56 @@ export default function App() {
             }}
             onBlur={() => setTargetInput(String(target))}
           />
+          <span className="field-unit" aria-hidden="true">
+            h
+          </span>
         </div>
         <div className="cycle-control">
           <button
             className="icon-button"
             onClick={() => setMonth(shiftMonth(month, -1))}
             aria-label="Previous cycle"
+            aria-keyshortcuts="ArrowLeft"
+            title="Previous cycle (←)"
           >
-            ←
+            <Icon name="previous" />
           </button>
-          <div>
+          <div className="cycle-text">
             <span className="cycle-label">
               {isCurrent
-                ? 'Current cycle'
+                ? 'Current'
                 : past
-                  ? 'Past cycle'
+                  ? 'Past'
                   : future
-                    ? 'Upcoming cycle'
-                    : 'Previous cycle'}
+                    ? 'Upcoming'
+                    : 'Previous'}
+              <span className="wide-only"> cycle</span>
+              <span className="narrow-only">
+                {' '}
+                · {cycle.end.getUTCFullYear()}
+              </span>
             </span>
             <strong>
-              {formatDate(cycle.start)} — {formatDate(cycle.end)},{' '}
-              {cycle.end.getUTCFullYear()}
+              {formatDate(cycle.start)} — {formatDate(cycle.end)}
+              <span className="wide-only">, {cycle.end.getUTCFullYear()}</span>
             </strong>
           </div>
           <button
             className="icon-button"
             onClick={() => setMonth(shiftMonth(month, 1))}
             aria-label="Next cycle"
+            aria-keyshortcuts="ArrowRight"
+            title="Next cycle (→)"
           >
-            →
+            <Icon name="next" />
           </button>
           <button
             className="current-button"
             disabled={isCurrent}
             onClick={() => setMonth(currentMonth(today))}
             aria-label="Back to current cycle"
+            aria-keyshortcuts="T"
+            title="Back to current cycle (T)"
           >
             Today
           </button>
@@ -195,93 +268,108 @@ export default function App() {
       </section>
 
       <section
-        className="stats-grid"
+        className="instrument"
         aria-label="Monthly progress"
         aria-busy={loading}
       >
         <article className="progress-card">
-          <div className="total-heading">
+          <div className="progress-head">
             <h2>Hours logged</h2>
+            <span className="day-chip">
+              {past
+                ? 'Cycle ended'
+                : future
+                  ? `Starts ${formatDate(cycle.start)}`
+                  : `Day ${elapsed} of ${cycle.days.length}`}
+            </span>
           </div>
-          <div className="progress-values">
-            <p className="total-hours">
-              {hasData ? total.toFixed(1) : '—'}
-              <span> / {target} h</span>
-            </p>
-            <div className="remaining">
+          <div className="dial-stage">
+            <Dial
+              days={days}
+              total={result.total}
+              target={target}
+              loading={loading}
+              showToday={!past && !future}
+              active={active}
+              onActive={setActive}
+              valueNow={hasData ? Math.round(progress) : undefined}
+              valueText={
+                hasData
+                  ? `${total.toFixed(1)} of ${target} hours`
+                  : 'No data loaded'
+              }
+            />
+          </div>
+          <div className="progress-info">
+            <div className="remaining-block">
               <span>Hours remaining</span>
-              <strong>
+              <strong className="remaining">
                 {hasData ? remaining.toFixed(1) : '—'}
                 <small> h</small>
               </strong>
             </div>
-          </div>
-          <div
-            className="progress-track"
-            role="progressbar"
-            aria-label="Monthly hours progress"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={hasData ? Math.round(progress) : undefined}
-            aria-valuetext={
-              hasData
-                ? `${total.toFixed(1)} of ${target} hours`
-                : 'No data loaded'
-            }
-          >
-            <span style={{ width: `${hasData ? progress : 0}%` }} />
-          </div>
-          <div className="progress-caption">
-            <span>
-              {hasData
-                ? remaining === 0
-                  ? 'Requirement met'
-                  : `${Math.round((total / target) * 100)}% complete`
-                : totalFailed
-                  ? 'Total unavailable'
-                  : 'No hours loaded yet'}
-            </span>
-            <span>
-              {past
-                ? 'Cycle ended'
-                : future
-                  ? 'Not started'
-                  : `${daysLeft} days left`}
-            </span>
+            <ul className="progress-caption">
+              <li className={hasData && remaining === 0 ? 'is-met' : ''}>
+                {hasData
+                  ? remaining === 0
+                    ? 'Requirement met'
+                    : `${Math.round((total / target) * 100)}% complete`
+                  : totalFailed
+                    ? 'Total unavailable'
+                    : 'No hours loaded yet'}
+              </li>
+              {paceText && (
+                <li
+                  className={`pace ${pace! >= -0.5 ? 'is-ahead' : 'is-behind'}`}
+                  title="Compared with your goal spread evenly across the cycle"
+                >
+                  {paceText}
+                </li>
+              )}
+              <li>
+                {past
+                  ? 'Cycle ended'
+                  : future
+                    ? 'Not started'
+                    : `${daysLeft} days left`}
+              </li>
+            </ul>
           </div>
         </article>
-        <article className="stat-card">
-          <h2>Daily average</h2>
-          <p>
-            {hasData ? average.toFixed(1) : '—'}
-            <span> h</span>
-          </p>
-          <small>{elapsed} started days</small>
-        </article>
-        <article className="stat-card">
-          <h2>Best day</h2>
-          <p>
-            {best ? best.hours!.toFixed(1) : '—'}
-            <span> h</span>
-          </p>
-          <small>
-            {best ? formatDate(new Date(best.date)) : 'No logged hours yet'}
-          </small>
-        </article>
-        <article className="stat-card">
-          <h2>Needed per day</h2>
-          <p>
-            {hasData && !past && !future ? needed.toFixed(1) : '—'}
-            <span> h</span>
-          </p>
-          <small>
-            {past
-              ? 'Cycle ended'
-              : future
-                ? 'Cycle not started'
-                : 'Including today'}
-          </small>
-        </article>
+        <div className="readouts">
+          <article className="stat-card">
+            <h2>Needed per day</h2>
+            <p>
+              {hasData && !past && !future ? needed.toFixed(1) : '—'}
+              <span> h</span>
+            </p>
+            <small>{neededNote}</small>
+          </article>
+          <article className="stat-card">
+            <h2>Daily average</h2>
+            <p>
+              {hasData ? average.toFixed(1) : '—'}
+              <span> h</span>
+            </p>
+            <small>{elapsed} started days</small>
+          </article>
+          <article className="stat-card">
+            <h2>Best day</h2>
+            <p>
+              {best ? best.hours!.toFixed(1) : '—'}
+              <span> h</span>
+            </p>
+            <small>
+              {best
+                ? formatDate(new Date(best.date), {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                  })
+                : 'No logged hours yet'}
+            </small>
+          </article>
+        </div>
       </section>
 
       <section
@@ -291,34 +379,52 @@ export default function App() {
       >
         <div className="daily-heading">
           <h1 id="daily-title">Daily hours</h1>
-          <div className={`status-row ${hasError ? 'has-error' : ''}`}>
+          <div
+            className={`status-row ${hasError ? 'has-error' : ''} ${loading ? 'is-loading' : ''}`}
+          >
             <p role="status">{status}</p>
             {submittedLogin && !loading && (
               <button
                 className="text-button"
                 onClick={() => setRefresh((value) => value + 1)}
               >
+                <Icon name="refresh" size={14} />
                 {hasError ? 'Retry' : 'Refresh'}
               </button>
             )}
           </div>
-
-          <p>
+          <p className="daily-meta">
             <span className="logged-count">
               <i aria-hidden="true" />
-              {hasDailyData ? loggedDays : '—'} days logged
+              {hasDailyData ? loggedDays : '—'}{' '}
+              {loggedDays === 1 ? 'day' : 'days'} logged
             </span>
             <span className="cycle-count">
               {cycle.days.length} days in cycle
             </span>
+            <span
+              className="legend"
+              aria-hidden="true"
+              title="Each day fills toward 12 hours"
+            >
+              0<i />
+              12h
+            </span>
           </p>
         </div>
-        <DailyGrid
-          days={cycle.days}
-          today={today}
-          logs={result.logs}
-          status={result.status}
-        />
+        <div className="weekdays" aria-hidden="true">
+          {days.slice(0, 7).map((day) => (
+            <span
+              key={day.key}
+              className={
+                day.date.getUTCDay() % 6 === 0 ? 'is-weekend' : undefined
+              }
+            >
+              {formatDate(day.date, { weekday: 'short' })}
+            </span>
+          ))}
+        </div>
+        <DailyGrid days={days} active={active} onActive={setActive} />
       </section>
     </main>
   )

@@ -11,7 +11,9 @@ npm ci
 npm run dev
 ```
 
-Enter your login, set your required hours (100 by default), and select **Check hours**. The page shows every day in the selected cycle, alongside logged hours, hours remaining, progress, daily average, best day, and hours needed per day. Use the arrows to check another cycle. There is no header or collapsed breakdown; the daily grid is always visible.
+Enter your login, set your required hours (100 by default), and select **Check hours**. The page shows every day in the selected cycle, alongside logged hours, hours remaining, progress, daily average, best day, and hours needed per day. Use the arrows (or the ← and → keys, and T for today) to check another cycle. There is no header or collapsed breakdown; the daily grid is always visible.
+
+The dial draws one ray per day, clockwise from the cycle's 28th; a ray reaches the edge at 12 hours. The outer ring fills toward your required hours, and the marker on it shows today: when the ring passes the marker you are ahead of an even pace, which the caption states in hours. Day cards fill toward the same 12-hour scale. Hovering a day in the grid or on the dial highlights it in both and shows its hours in the dial's center. Days fill in as their requests finish.
 
 Your login, required hours, and theme are remembered in this browser. A saved login is only sent after you select **Check hours**. Hour records are kept in memory.
 
@@ -43,4 +45,4 @@ Responses may contain arrays or `data`, `logs`, or `hydra:member` wrappers. Hour
 
 Daily requests run four at a time alongside one cycle-total request. Each request times out after 15 seconds and cancels when the login or cycle changes. Complete results are cached in memory for one minute (up to 12 entries). **Refresh** bypasses the cache; **Retry** reloads the cycle. Future days are not requested individually, and upcoming cycles make no requests.
 
-The UI is in `src/App.tsx`, request handling in `src/hooks/useLogs.ts`, and API/calendar helpers in `src/lib/`.
+The UI is in `src/App.tsx`, with the dial in `src/components/Dial.tsx` and day cards in `src/components/DailyGrid.tsx`; both read day states from `src/lib/days.ts`. Request handling is in `src/hooks/useLogs.ts`, and API/calendar helpers are in `src/lib/`.

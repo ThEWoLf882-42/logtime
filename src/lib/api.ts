@@ -122,7 +122,7 @@ export async function loadCycle(
   login: string,
   days: Date[],
   signal: AbortSignal,
-  onProgress: (count: number) => void,
+  onProgress: (count: number, log: DayLog) => void,
 ): Promise<DayLog[]> {
   const results: DayLog[] = new Array(days.length)
   let cursor = 0
@@ -136,7 +136,7 @@ export async function loadCycle(
         date: dateKey(date),
         hours: await requestHours(login, date, date, signal, extractHours),
       }
-      onProgress(++completed)
+      onProgress(++completed, results[index])
     }
   }
   // Avoid issuing a whole month's requests simultaneously.
