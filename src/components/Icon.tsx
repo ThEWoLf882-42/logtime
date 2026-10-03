@@ -1,3 +1,9 @@
+// Sized in rem so icons scale with the interface on large displays.
+const remBox = (size: number) => ({
+  width: `${size / 16}rem`,
+  height: `${size / 16}rem`,
+})
+
 type IconName = 'sun' | 'moon' | 'previous' | 'next' | 'enter' | 'refresh'
 
 export default function Icon({
@@ -22,8 +28,7 @@ export default function Icon({
   }
   return (
     <svg
-      width={size}
-      height={size}
+      style={remBox(size)}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -43,8 +48,7 @@ export function Mark({ size = 26 }: { size?: number }) {
   return (
     <svg
       className="mark"
-      width={size}
-      height={size}
+      style={remBox(size)}
       viewBox="0 0 32 32"
       aria-hidden="true"
     >

@@ -17,7 +17,7 @@ The dial draws one ray per day, clockwise from the cycle's 28th; a ray reaches t
 
 Your login, required hours, and theme are remembered in this browser. A saved login is only sent after you select **Check hours**. Hour records are kept in memory.
 
-The layout fills the viewport and fits without scrolling at common desktop sizes and portrait phone sizes of at least 740px height. Shorter viewports and increased browser zoom can scroll so content stays accessible. Light and dark backgrounds cover the entire page.
+The layout fills the viewport and fits without scrolling at common desktop sizes and portrait phone sizes of at least 740px height. On screens larger than about 1680×945, such as Retina iMacs and 4K displays, the whole interface scales up evenly: sizes are in `rem`, and the root font size grows with the viewport. Shorter viewports and increased browser zoom can scroll so content stays accessible. Light and dark backgrounds cover the entire page.
 
 ## Checks
 
