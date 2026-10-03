@@ -426,6 +426,10 @@ export default function App() {
         </div>
         <DailyGrid days={days} active={active} onActive={setActive} />
       </section>
+      <p className="signature">
+        made with <span className="signature-love">love</span> by{' '}
+        <span className="signature-name">Aymane Gimi</span>
+      </p>
     </main>
   )
 }
