@@ -488,6 +488,28 @@ button:disabled {
 .progress-caption .is-met {
   color: var(--accent-ink);
 }
+.progress-caption .overshoot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.375rem;
+  color: color-mix(in srgb, var(--heat) 62%, var(--text));
+  font-weight: 600;
+}
+[data-theme='dark'] .progress-caption .overshoot {
+  color: var(--heat);
+}
+.overshoot::before {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--heat);
+  box-shadow: 0 0 0.5rem var(--heat);
+}
+.overshoot.heat-3::before {
+  animation: pulse 1.4s ease-in-out infinite;
+}
 .pace::before {
   content: '▲ ';
   content: '▲ ' / '';
@@ -593,6 +615,29 @@ button:disabled {
   transition:
     stroke-dasharray 1s var(--ease) calc(var(--index) * 22ms),
     opacity 0.2s;
+}
+.dial-ray.is-over {
+  transition:
+    stroke-dasharray 1s var(--ease) calc(var(--index) * 22ms),
+    stroke 0.4s,
+    opacity 0.2s;
+}
+.dial-ray.heat-3 {
+  animation: pulse 1.8s ease-in-out infinite;
+}
+/* The goal's second lap: its length is the overrun, its color the heat. */
+.dial-overflow {
+  fill: none;
+  stroke-width: 6;
+  stroke-linecap: round;
+  filter: url(#dial-glow);
+  transition:
+    stroke-dasharray 1.3s var(--ease) 0.4s,
+    stroke 0.6s,
+    opacity 0.3s;
+}
+.dial-overflow.heat-3 {
+  animation: pulse 1.8s ease-in-out infinite;
 }
 .dial-zero {
   fill: var(--moon);
@@ -855,6 +900,16 @@ button:disabled {
     var(--sun)
   );
 }
+.legend .legend-heat {
+  width: 1.75rem;
+  background: linear-gradient(
+    90deg,
+    rgb(255 138 31),
+    rgb(255 69 32),
+    rgb(255 45 85),
+    rgb(193 60 255)
+  );
+}
 .weekdays {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -929,6 +984,37 @@ button:disabled {
   background-size: 250% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
   animation-delay: calc(var(--index) * 35ms);
+}
+/* Overtime: past a full day, a card heats up with its overrun (lib/heat.ts):
+   hotter color, stronger border and glow, and a pulse at the extreme. */
+.day-card.is-over {
+  border-color: color-mix(in srgb, var(--heat) 60%, var(--line));
+  box-shadow: 0 0 calc(0.25rem + var(--over) * 1.25rem)
+    color-mix(in srgb, var(--heat) calc(25% + var(--over) * 45%), transparent);
+}
+.day-card.is-over::before {
+  border-top-color: var(--heat);
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--heat) 80%, transparent),
+    color-mix(in srgb, var(--heat) 32%, transparent)
+  );
+  box-shadow: 0 -0.625rem 1.5rem -0.75rem var(--heat);
+}
+.day-card.heat-3 {
+  animation:
+    rise-in 0.6s var(--ease) both,
+    heat-pulse 1.8s ease-in-out 0.6s infinite;
+}
+.day-over {
+  flex-shrink: 0;
+  padding: 0.125rem 0.3125rem;
+  border-radius: 999px;
+  color: var(--on-accent);
+  background: var(--heat);
+  font: 600 0.5625rem/1.2 var(--font-mono);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 .day-card.is-active {
   border-color: var(--text);
@@ -1066,6 +1152,9 @@ button:disabled {
   }
 }
 @container (max-width: 4.75rem) {
+  .day-over {
+    display: none;
+  }
   .day-date time span {
     display: none;
   }
@@ -1079,6 +1168,12 @@ button:disabled {
 @keyframes spin {
   to {
     transform: rotate(1turn);
+  }
+}
+@keyframes heat-pulse {
+  50% {
+    box-shadow: 0 0 1.75rem 0.125rem
+      color-mix(in srgb, var(--heat) 75%, transparent);
   }
 }
 @keyframes pulse {

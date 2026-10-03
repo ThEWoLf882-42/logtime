@@ -13,9 +13,13 @@ npm run dev
 
 Enter your login, set your required hours (100 by default), and select **Check hours**. The page shows every day in the selected cycle, alongside logged hours, hours remaining, progress, daily average, best day, and hours needed per day. Use the arrows (or the ← and → keys, and T for today) to check another cycle. There is no header or collapsed breakdown; the daily grid is always visible.
 
-The dial draws one ray per day, clockwise from the cycle's 28th; a ray reaches the edge at 12 hours. The outer ring fills toward your required hours, and the marker on it shows today: when the ring passes the marker you are ahead of an even pace, which the caption states in hours. Day cards fill toward the same 12-hour scale. Hovering a day in the grid or on the dial highlights it in both and shows its hours in the dial's center. Days fill in as their requests finish.
+The dial draws one ray per day, clockwise from the cycle's 28th; a ray reaches the edge at 12 hours. The outer ring fills toward your required hours, and the marker on it shows today: when the ring passes the marker you are ahead of an even pace, which the caption states in hours. Day cards fill toward the same 12-hour scale.
 
-Your login, required hours, and theme are remembered in this browser. A saved login is only sent after you select **Check hours**. Hour records are kept in memory.
+Overruns heat up by how far they go: a day past 12 hours turns from hot orange through red and crimson to violet at 18 hours or more, with a stronger glow, a `+hours` chip, and a level (Overtime, Heavy overtime, Extreme overtime); its dial ray reaches past the edge. Past the required hours, the ring wraps into a second lap whose length is the overrun (a full lap is double the goal) and whose color follows the same scale, labeled Over goal, Well over goal, or Far over goal. The most extreme level pulses.
+
+Hovering a day in the grid or on the dial highlights it in both and shows its hours in the dial's center. Days fill in as their requests finish.
+
+The dark theme is the default; your login, required hours, and theme are remembered in this browser. A saved login is only sent after you select **Check hours**. Hour records are kept in memory.
 
 The layout fills the viewport and fits without scrolling at common desktop sizes and portrait phone sizes of at least 740px height. On screens larger than about 1680×945, such as Retina iMacs and 4K displays, the whole interface scales up evenly: sizes are in `rem`, and the root font size grows with the viewport. Shorter viewports and increased browser zoom can scroll so content stays accessible. Light and dark backgrounds cover the entire page.
 

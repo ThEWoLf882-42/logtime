@@ -25,6 +25,19 @@ describe('dashboard', () => {
     fireEvent.blur(screen.getByLabelText('Required hours'))
     expect(screen.getByLabelText('Required hours')).toHaveValue(150)
   })
+  it('defaults to the dark theme and remembers a light choice', () => {
+    vi.stubGlobal('fetch', vi.fn())
+    const { unmount } = render(<App />)
+    expect(document.documentElement.dataset.theme).toBe('dark')
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Switch to light mode' }),
+    )
+    expect(document.documentElement.dataset.theme).toBe('light')
+    expect(localStorage.getItem('logtime.theme')).toBe('light')
+    unmount()
+    render(<App />)
+    expect(document.documentElement.dataset.theme).toBe('light')
+  })
   it('shows failure without invented zero totals and supports retry', async () => {
     const fetchMock = vi.fn().mockRejectedValue(new Error('offline'))
     vi.stubGlobal('fetch', fetchMock)
@@ -160,6 +173,36 @@ describe('dashboard', () => {
         '42.0 of 100 hours',
       ),
     )
+  })
+  it('heats up days and the goal by how far they run over', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url, options) => {
+        const { startDate, endDate } = JSON.parse(options.body)
+        return {
+          ok: true,
+          json: async () => ({ totalHours: startDate === endDate ? 17 : 160 }),
+        }
+      }),
+    )
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Your campus login'), {
+      target: { value: 'student' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /Check hours/ }))
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'Loaded for student',
+      ),
+    )
+    expect(screen.getByText('Requirement met', { exact: true })).toBeVisible()
+    expect(document.querySelector('.overshoot')).toHaveTextContent(
+      'Well over goal · +60.0 h',
+    )
+    expect(document.querySelectorAll('.day-card.is-over.heat-3')).toHaveLength(
+      13,
+    )
+    expect(document.querySelector('.day-over')).toHaveTextContent('+5.0h')
   })
   it('shows the API total even when all daily requests fail', async () => {
     vi.stubGlobal(

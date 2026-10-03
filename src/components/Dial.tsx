@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react'
 import { useTween } from '../hooks/useTween'
 import { formatDate } from '../lib/calendar'
 import type { DayInfo } from '../lib/days'
+import { clampHeat, DAY_HEAT_LABELS, heatColor, heatTier } from '../lib/heat'
 
 type Props = {
   days: DayInfo[]
@@ -23,6 +24,8 @@ const RAY_OUT = 164
 const RAY_LENGTH = RAY_OUT - RAY_IN
 const RING = 183
 const RING_LENGTH = 2 * Math.PI * RING
+// Overtime rays reach past a full day toward the ring as they get hotter.
+const OVERTIME_REACH = 10
 
 function polar(radius: number, degrees: number) {
   const radians = (degrees * Math.PI) / 180
@@ -47,6 +50,11 @@ export default function Dial({
   const width = Math.min(10, ((2 * Math.PI * RAY_IN) / days.length) * 0.52)
   const shown = useTween(total ?? 0)
   const fraction = total === null ? 0 : Math.min(total / target, 1)
+  // Past the goal, a second lap shows the overrun (a full lap is double).
+  const excess = total === null ? 0 : Math.max(total / target - 1, 0)
+  const overflow = Math.min(excess, 1)
+  const goalColor = heatColor(clampHeat(excess))
+  const sunTurn = fraction < 1 ? fraction : overflow
   const todayIndex = days.findIndex((day) => day.isToday)
   const activeDay = days.find((day) => day.key === active)
 
@@ -103,13 +111,28 @@ export default function Dial({
             opacity: fraction > 0 ? 1 : 0,
           }}
         />
-        {fraction > 0 && fraction < 1 && (
+        <circle
+          className={`dial-overflow heat-${heatTier(clampHeat(excess))}`}
+          cx={CENTER}
+          cy={CENTER}
+          r={RING}
+          transform={`rotate(-90 ${CENTER} ${CENTER})`}
+          style={{
+            strokeDasharray: `${overflow * RING_LENGTH} ${RING_LENGTH}`,
+            stroke: goalColor,
+            opacity: excess > 0 ? 1 : 0,
+          }}
+        />
+        {sunTurn > 0 && (fraction < 1 || overflow < 1) && (
           <circle
             className="dial-sun"
             cx={CENTER}
             cy={CENTER - RING}
             r="5.5"
-            style={{ transform: `rotate(${fraction * 360}deg)` }}
+            style={{
+              transform: `rotate(${sunTurn * 360}deg)`,
+              ...(excess > 0 && { fill: goalColor }),
+            }}
           />
         )}
         {showToday && todayIndex >= 0 && (
@@ -133,7 +156,7 @@ export default function Dial({
                 style={{ '--index': index } as CSSProperties}
               >
                 <line className="dial-slot" {...line} strokeWidth={width} />
-                {day.state === 'logged' && (
+                {day.state === 'logged' && day.overtime === 0 && (
                   <line
                     className="dial-ray"
                     {...line}
@@ -142,6 +165,9 @@ export default function Dial({
                       strokeDasharray: `${day.level * RAY_LENGTH} ${RAY_LENGTH * 2}`,
                     }}
                   />
+                )}
+                {day.overtime > 0 && (
+                  <OvertimeRay angle={angle} heat={day.heat} width={width} />
                 )}
                 {day.state === 'zero' && (
                   <circle
@@ -180,14 +206,21 @@ export default function Dial({
         </g>
 
         <g className="dial-readout">
-          <text className="dial-kicker" x={CENTER} y="160">
+          <text
+            className="dial-kicker"
+            x={CENTER}
+            y="160"
+            style={!activeDay && excess > 0 ? { fill: goalColor } : {}}
+          >
             {activeDay
               ? formatDate(activeDay.date, {
                   weekday: 'short',
                   month: 'short',
                   day: 'numeric',
                 })
-              : 'Logged'}
+              : excess > 0
+                ? `+${(total! - target).toFixed(1)} h over`
+                : 'Logged'}
           </text>
           <text className="dial-value" x={CENTER} y="218">
             {activeDay
@@ -198,11 +231,50 @@ export default function Dial({
                 ? shown.toFixed(1)
                 : '—'}
           </text>
-          <text className="dial-sub" x={CENTER} y="248">
-            {activeDay ? activeDay.label : `of ${target} h`}
+          <text
+            className="dial-sub"
+            x={CENTER}
+            y="248"
+            style={activeDay?.heat ? { fill: heatColor(activeDay.heat) } : {}}
+          >
+            {activeDay
+              ? activeDay.overtime > 0
+                ? DAY_HEAT_LABELS[heatTier(activeDay.heat)]
+                : activeDay.label
+              : `of ${target} h`}
           </text>
         </g>
       </svg>
     </div>
+  )
+}
+
+/** A day past twelve hours: a full ray, extended and recolored by its heat. */
+function OvertimeRay({
+  angle,
+  heat,
+  width,
+}: {
+  angle: number
+  heat: number
+  width: number
+}) {
+  const inner = polar(RAY_IN, angle)
+  const reach = RAY_OUT + OVERTIME_REACH * heat
+  const outer = polar(reach, angle)
+  const length = reach - RAY_IN
+  return (
+    <line
+      className={`dial-ray is-over heat-${heatTier(heat)}`}
+      x1={inner.x}
+      y1={inner.y}
+      x2={outer.x}
+      y2={outer.y}
+      strokeWidth={width}
+      style={{
+        stroke: heatColor(heat),
+        strokeDasharray: `${length} ${length * 2}`,
+      }}
+    />
   )
 }

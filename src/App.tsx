@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type FormEvent,
+} from 'react'
 import Icon, { Mark } from './components/Icon'
 import Dial from './components/Dial'
 import DailyGrid from './components/DailyGrid'
@@ -12,6 +18,7 @@ import {
   shiftMonth,
 } from './lib/calendar'
 import { describeDays } from './lib/days'
+import { clampHeat, GOAL_HEAT_LABELS, heatColor, heatTier } from './lib/heat'
 import { readSetting, saveSetting, validTarget } from './lib/storage'
 
 export default function App() {
@@ -23,15 +30,8 @@ export default function App() {
     validTarget(readSetting('target', '100')),
   )
   const [targetInput, setTargetInput] = useState(String(target))
-  const [dark, setDark] = useState(
-    () =>
-      readSetting(
-        'theme',
-        window.matchMedia('(prefers-color-scheme: dark)').matches
-          ? 'dark'
-          : 'light',
-      ) === 'dark',
-  )
+  // Dark is the default; a theme chosen with the toggle is remembered.
+  const [dark, setDark] = useState(() => readSetting('theme') !== 'light')
   const [refresh, setRefresh] = useState(0)
   // The day under the pointer, shared by the dial and the grid.
   const [active, setActive] = useState<string | null>(null)
@@ -71,6 +71,9 @@ export default function App() {
   }, [])
   useEffect(() => {
     document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', dark ? '#0d0c12' : '#f5f0e7')
     saveSetting('theme', dark ? 'dark' : 'light')
   }, [dark])
   useEffect(() => {
@@ -139,6 +142,10 @@ export default function App() {
       : Math.abs(pace) < 0.5
         ? 'On pace'
         : `${Math.abs(pace).toFixed(1)} h ${pace > 0 ? 'ahead of' : 'behind'} pace`
+  // Hours past the goal heat up to the most drastic level at double the goal.
+  const overGoal = hasData ? Math.max(total - target, 0) : 0
+  const goalHeat = clampHeat(overGoal / target)
+  const goalTier = heatTier(goalHeat)
   const neededNote = past
     ? 'Cycle ended'
     : future
@@ -317,6 +324,14 @@ export default function App() {
                     ? 'Total unavailable'
                     : 'No hours loaded yet'}
               </li>
+              {goalTier > 0 && (
+                <li
+                  className={`overshoot heat-${goalTier}`}
+                  style={{ '--heat': heatColor(goalHeat) } as CSSProperties}
+                >
+                  {GOAL_HEAT_LABELS[goalTier]} · +{overGoal.toFixed(1)} h
+                </li>
+              )}
               {paceText && (
                 <li
                   className={`pace ${pace! >= -0.5 ? 'is-ahead' : 'is-behind'}`}
@@ -404,10 +419,12 @@ export default function App() {
             <span
               className="legend"
               aria-hidden="true"
-              title="Each day fills toward 12 hours"
+              title="Each day fills toward 12 hours; longer days heat up to 18 hours and beyond"
             >
               0<i />
-              12h
+              12
+              <i className="legend-heat" />
+              18h+
             </span>
           </p>
         </div>

@@ -61,19 +61,20 @@ test('check progress, keep every day visible, and save preferences', async ({
   await expect(page.getByRole('status')).toContainText(
     'Loaded for test-student',
   )
-  await page.screenshot({
-    path: 'test-results/dashboard-desktop.png',
-    fullPage: true,
-  })
-  await page.getByRole('button', { name: 'Switch to dark mode' }).click()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   await page.screenshot({
     path: 'test-results/dashboard-dark.png',
+    fullPage: true,
+  })
+  await page.getByRole('button', { name: 'Switch to light mode' }).click()
+  await page.screenshot({
+    path: 'test-results/dashboard-desktop.png',
     fullPage: true,
   })
   await page.reload()
   await expect(page.getByLabel('Required hours')).toHaveValue('150')
   await expect(page.getByLabel('Your campus login')).toHaveValue('test-student')
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
   expect(errors).toEqual([])
 })
 
@@ -215,7 +216,8 @@ test('all daily cards fit the viewport and dark background fills the page', asyn
       cardsFit: true,
     })
   }
-  await page.getByRole('button', { name: 'Switch to dark mode' }).click()
+  // Dark is the default theme, even when the device prefers light.
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   const backgrounds = await page.evaluate(() =>
     [
       document.documentElement,
