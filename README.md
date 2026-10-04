@@ -13,11 +13,11 @@ npm run dev
 
 Enter your login, set your required hours (100 by default), and select **Check hours**. The page shows every day in the selected cycle, alongside logged hours, hours remaining, progress, daily average, best day, and hours needed per day. Use the arrows (or the ← and → keys, and T for today) to check another cycle. There is no header or collapsed breakdown; the daily grid is always visible.
 
-The dial draws one ray per day, clockwise from the cycle's 28th; a ray reaches the edge at 12 hours. The outer ring fills toward your required hours, and the marker on it shows today: when the ring passes the marker you are ahead of an even pace, which the caption states in hours. Day cards fill toward the same 12-hour scale.
+The design is a quiet ledger: ink, paper, and hairline rules carry the interface, one typeface (Archivo, condensed for figures) sets everything, and color is reserved for data, with cobalt for logged hours and heat colors for overruns. The headline shows the cycle total against the required hours, which you can edit in place. Below it, a scale fills toward the goal and marks where an even pace would put you today; the caption states how far ahead or behind you are. Remaining, needed per day, daily average, and best day follow.
 
-Overruns heat up by how far they go: a day past 12 hours turns from hot orange through red and crimson to violet at 18 hours or more, with a stronger glow, a `+hours` chip, and a level (Overtime, Heavy overtime, Extreme overtime); its dial ray reaches past the edge. Past the required hours, the ring wraps into a second lap whose length is the overrun (a full lap is double the goal) and whose color follows the same scale, labeled Over goal, Well over goal, or Far over goal. The most extreme level pulses.
+Daily hours form a column chart on one shared hour scale, with a dashed line at 12 hours. Future days (and today) show a dashed outline of the hours each remaining day needs. On narrow screens the chart becomes a ledger of rows in two or three columns. Days past 12 hours draw their extra hours in heat colors, from hot orange through red and crimson to violet at 18 hours or more (Overtime, Heavy overtime, Extreme overtime). Past the required hours, the goal scale extends and the overrun is drawn in the same heat colors, labeled Over goal, Well over goal, or Far over goal; the most extreme levels pulse.
 
-Hovering a day in the grid or on the dial highlights it in both and shows its hours in the dial's center. Days fill in as their requests finish.
+Days fill in as their requests finish, and a thin line at the top of the page shows loading progress.
 
 The dark theme is the default; your login, required hours, and theme are remembered in this browser. A saved login is only sent after you select **Check hours**. Hour records are kept in memory.
 
@@ -49,4 +49,4 @@ Responses may contain arrays or `data`, `logs`, or `hydra:member` wrappers. Hour
 
 Daily requests run four at a time alongside one cycle-total request. Each request times out after 15 seconds and cancels when the login or cycle changes. Complete results are cached in memory for one minute (up to 12 entries). **Refresh** bypasses the cache; **Retry** reloads the cycle. Future days are not requested individually, and upcoming cycles make no requests.
 
-The UI is in `src/App.tsx`, with the dial in `src/components/Dial.tsx` and day cards in `src/components/DailyGrid.tsx`; both read day states from `src/lib/days.ts`. Request handling is in `src/hooks/useLogs.ts`, and API/calendar helpers are in `src/lib/`.
+The UI is in `src/App.tsx`, with the goal scale in `src/components/Ruler.tsx` and the daily chart in `src/components/DailyGrid.tsx`; day states come from `src/lib/days.ts` and overrun colors from `src/lib/heat.ts`. Request handling is in `src/hooks/useLogs.ts`, and API/calendar helpers are in `src/lib/`.

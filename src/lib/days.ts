@@ -10,15 +10,13 @@ export type DayInfo = {
   hours: number | null
   state: DayState
   label: string
-  /** Share of a full day, from 0 to 1, used to fill cards and dial rays. */
-  level: number
   /** Hours past a full day, and how drastic that overrun is (0 to 1). */
   overtime: number
   heat: number
   isToday: boolean
 }
 
-// A twelve-hour day fills a card and reaches the edge of the dial.
+// A twelve-hour day is a full day; hours beyond it count as overtime.
 export const FULL_DAY_HOURS = 12
 // Six hours past a full day (an 18-hour day) is the most drastic overrun.
 export const OVERTIME_SPAN_HOURS = 6
@@ -60,7 +58,6 @@ export function describeDays(
             ? 'logged'
             : 'zero',
       label,
-      level: hours === null ? 0 : Math.min(hours / FULL_DAY_HOURS, 1),
       overtime,
       heat: clampHeat(overtime / OVERTIME_SPAN_HOURS),
       isToday: key === todayKey,

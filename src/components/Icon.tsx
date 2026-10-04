@@ -4,7 +4,7 @@ const remBox = (size: number) => ({
   height: `${size / 16}rem`,
 })
 
-type IconName = 'sun' | 'moon' | 'previous' | 'next' | 'enter' | 'refresh'
+type IconName = 'sun' | 'moon' | 'previous' | 'next' | 'refresh'
 
 export default function Icon({
   name,
@@ -23,7 +23,6 @@ export default function Icon({
     moon: <path d="M20 14A8 8 0 0 1 10 4a8 8 0 1 0 10 10Z" />,
     previous: <path d="m14.5 6-6 6 6 6" />,
     next: <path d="m9.5 6 6 6-6 6" />,
-    enter: <path d="M5 12h13m-5-5 5 5-5 5" />,
     refresh: <path d="M19 12a7 7 0 1 1-2.05-4.95M19 4.5V8h-3.5" />,
   }
   return (
@@ -32,38 +31,12 @@ export default function Icon({
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.7"
+      strokeWidth="1.6"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
     >
       {paths[name]}
-    </svg>
-  )
-}
-
-/** The sundial mark: a ring of rays around a lit core. */
-export function Mark({ size = 26 }: { size?: number }) {
-  const rays = Array.from({ length: 12 }, (_, index) => index * 30)
-  return (
-    <svg
-      className="mark"
-      style={remBox(size)}
-      viewBox="0 0 32 32"
-      aria-hidden="true"
-    >
-      <circle cx="16" cy="16" r="5" className="mark-core" />
-      {rays.map((angle, index) => (
-        <line
-          key={angle}
-          x1="16"
-          y1={index % 3 === 0 ? 2.5 : 5}
-          x2="16"
-          y2="9"
-          transform={`rotate(${angle} 16 16)`}
-          className="mark-ray"
-        />
-      ))}
     </svg>
   )
 }

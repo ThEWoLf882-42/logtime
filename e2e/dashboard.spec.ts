@@ -199,7 +199,7 @@ test('all daily cards fit the viewport and dark background fills the page', asyn
         document.documentElement.scrollWidth <= window.innerWidth,
       cardsFit: [
         ...document.querySelectorAll(
-          '.day-card, .stat-card, .progress-card, .controls',
+          '.day-card, .stat-card, .summary, .controls',
         ),
       ].every((card) => {
         const rect = card.getBoundingClientRect()
@@ -226,5 +226,5 @@ test('all daily cards fit the viewport and dark background fills the page', asyn
     ].map((element) => getComputedStyle(element).backgroundColor),
   )
   expect(new Set(backgrounds).size).toBe(1)
-  expect(backgrounds[0]).toBe('rgb(13, 12, 18)')
+  expect(backgrounds[0]).toBe('rgb(18, 18, 17)')
 })

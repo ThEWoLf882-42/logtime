@@ -28,7 +28,7 @@ describe('heat', () => {
       ],
       'ready',
     )
-    expect(normal).toMatchObject({ overtime: 0, heat: 0, level: 11.5 / 12 })
-    expect(long).toMatchObject({ overtime: 3, heat: 0.5, level: 1 })
+    expect(normal).toMatchObject({ overtime: 0, heat: 0 })
+    expect(long).toMatchObject({ overtime: 3, heat: 0.5 })
   })
 })
