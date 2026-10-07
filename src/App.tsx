@@ -21,18 +21,14 @@ import {
   shiftMonth,
 } from './lib/calendar'
 import { describeDays, FULL_DAY_HOURS } from './lib/days'
-import {
-  clampHeat,
-  DAY_HEAT_LABELS,
-  GOAL_HEAT_LABELS,
-  heatColor,
-  heatTier,
-} from './lib/heat'
+import { clampHeat, GOAL_HEAT_LABELS, heatColor, heatTier } from './lib/heat'
 import {
   capacityUntil,
   DAY_LIMIT_HOURS,
+  DEAD,
   earliestFinish,
   finishPlan,
+  LOAD_FACES,
   REALISTIC_HOURS,
   type Clock,
 } from './lib/plan'
@@ -195,21 +191,29 @@ export default function App() {
     text: string
     fixes: Array<{ label: string; date: Date }>
   } | null = null
+  // "No sleep" is the earliest date at 24 h a day; "Survivable" is 12 h a day.
   const fixes = [
     ...(earliest && plan && !plan.possible
-      ? [{ label: 'Earliest possible', date: earliest }]
+      ? [{ label: 'No sleep', date: earliest }]
       : []),
     ...(realistic &&
     plan &&
     realistic > plan.date &&
     dateKey(realistic) !== (earliest && dateKey(earliest))
-      ? [{ label: `Realistic, ${REALISTIC_HOURS} h a day`, date: realistic }]
+      ? [{ label: 'Survivable', date: realistic }]
       : []),
+  ]
+  // The jokes get darker as the load climbs, ending at what a day can't hold.
+  const heavyJokes = [
+    '',
+    'Sleep is optional now.',
+    'Zombie mode unlocked.',
+    'Pick a coffin.',
   ]
   if (canPlan && !earliest)
     planAlert = {
       tone: 'impossible',
-      text: `${trim(target)} h can’t be reached this cycle: only ${capacityUntil(cycle.end, clock).toFixed(1)} h are left in it.`,
+      text: `${DEAD} Only ${trim(capacityUntil(cycle.end, clock))} h left this cycle. ${trim(target)} h? Not in this life.`,
       fixes: [],
     }
   else if (plan && !plan.possible)
@@ -217,14 +221,14 @@ export default function App() {
       tone: 'impossible',
       text:
         plan.perDay > DAY_LIMIT_HOURS
-          ? `Not possible by ${shortDate(plan.date)}: it needs ${plan.perDay.toFixed(1)} h a day, and a day has 24.`
-          : `Not possible by ${shortDate(plan.date)}: only ${plan.capacity.toFixed(1)} h are left until then, and you need ${remaining.toFixed(1)} h.`,
+          ? `${DEAD} ${trim(plan.perDay)} h a day by ${shortDate(plan.date)}? Days have 24. RIP.`
+          : `${DEAD} Only ${trim(plan.capacity)} h left before ${shortDate(plan.date)}, you need ${trim(remaining)}. RIP.`,
       fixes,
     }
   else if (plan && plan.perDay > REALISTIC_HOURS)
     planAlert = {
       tone: 'heavy',
-      text: `${DAY_HEAT_LABELS[heatTier(loadHeat)]}: ${plan.perDay.toFixed(1)} h a day until ${shortDate(plan.date)}.`,
+      text: `${LOAD_FACES[heatTier(loadHeat)]} ${trim(plan.perDay)} h a day until ${shortDate(plan.date)}. ${heavyJokes[heatTier(loadHeat)]}`,
       fixes,
     }
   const best = result.logs
@@ -260,7 +264,7 @@ export default function App() {
         : remaining === 0
           ? 'Goal reached'
           : plan && !plan.possible
-            ? 'More than the time left'
+            ? 'Not humanly possible'
             : finishDay
               ? `Until ${shortDate(finishDay)}`
               : needed > average
@@ -419,8 +423,8 @@ export default function App() {
             </p>
             {target > cycleCapacity && (
               <p className="goal-note">
-                This {cycle.days.length}-day cycle holds only {cycleCapacity}
-                &thinsp;h.
+                {DEAD} {cycleCapacity}&thinsp;h max. Afterlife hours don’t
+                count.
               </p>
             )}
             <ul className="progress-caption">

@@ -139,9 +139,9 @@ test('pick a finish date from the chart on desktop and phone', async ({
   await page.setViewportSize({ width: 375, height: 812 })
   await page.getByRole('button', { name: /Finish by Thursday, Sep 10/ }).click()
   await expect(page.locator('.plan-alert')).toContainText(
-    'Not possible by Thu, Sep 10',
+    '29 h a day by Thu, Sep 10? Days have 24. RIP.',
   )
-  await page.getByRole('button', { name: /Earliest possible/ }).click()
+  await page.getByRole('button', { name: /No sleep/ }).click()
   await expect(
     page.getByRole('button', { name: /by Fri, Sep 11/ }),
   ).toBeVisible()

@@ -6,6 +6,11 @@ export const DAY_LIMIT_HOURS = 24
 // The pace suggested as realistic: a full twelve-hour day.
 export const REALISTIC_HOURS = FULL_DAY_HOURS
 
+// How a plan looks as the daily load climbs past a full day, by heat tier.
+export const LOAD_FACES = ['', '😵', '🧟', '⚰️'] as const
+// Past what a day can hold.
+export const DEAD = '💀'
+
 /** Where today stands: the campus date, hours left in it, and hours logged so far. */
 export type Clock = {
   today: Date

@@ -233,14 +233,14 @@ describe('dashboard', () => {
       }),
     )
     expect(document.querySelector('.plan-alert')).toHaveTextContent(
-      'Not possible by Thu, Sep 10: it needs 29.0 h a day, and a day has 24.',
+      '💀 29 h a day by Thu, Sep 10? Days have 24. RIP.',
     )
     expect(
-      screen.getByRole('button', { name: 'Earliest possible: Fri, Sep 11' }),
+      screen.getByRole('button', { name: 'No sleep: Fri, Sep 11' }),
     ).toBeVisible()
     fireEvent.click(
       screen.getByRole('button', {
-        name: 'Realistic, 12 h a day: Sun, Sep 13',
+        name: 'Survivable: Sun, Sep 13',
       }),
     )
     expect(screen.getByRole('button', { name: /by Sun, Sep 13/ })).toBeVisible()
@@ -270,7 +270,7 @@ describe('dashboard', () => {
       target: { value: '999' },
     })
     expect(document.querySelector('.goal-note')).toHaveTextContent(
-      /This 31-day cycle holds only 744\s?h\./,
+      /744\s?h max\. Afterlife hours don’t count\./,
     )
     fireEvent.change(screen.getByLabelText('Required hours'), {
       target: { value: '500' },
@@ -282,7 +282,7 @@ describe('dashboard', () => {
     fireEvent.click(screen.getByRole('button', { name: /Check hours/ }))
     await waitFor(() =>
       expect(document.querySelector('.plan-alert')).toHaveTextContent(
-        '500 h can’t be reached this cycle: only 443.0 h are left in it.',
+        '💀 Only 443 h left this cycle. 500 h? Not in this life.',
       ),
     )
   })

@@ -2,7 +2,7 @@ import { useRef, type CSSProperties, type KeyboardEvent } from 'react'
 import { formatDate } from '../lib/calendar'
 import { FULL_DAY_HOURS, type DayInfo } from '../lib/days'
 import { clampHeat, DAY_HEAT_LABELS, heatColor, heatTier } from '../lib/heat'
-import { DAY_LIMIT_HOURS, type FinishPlan } from '../lib/plan'
+import { DAY_LIMIT_HOURS, DEAD, LOAD_FACES, type FinishPlan } from '../lib/plan'
 
 type Props = {
   days: DayInfo[]
@@ -233,8 +233,8 @@ export default function DailyGrid({
             </span>
             <strong>
               {shown.possible
-                ? `${shown.perDay.toFixed(1)} h a day`
-                : 'Not possible'}
+                ? `${load === 'heavy' ? `${LOAD_FACES[heatTier(clampHeat((needed - FULL_DAY_HOURS) / 6))]} ` : ''}${shown.perDay.toFixed(1)} h a day`
+                : `${DEAD} RIP`}
             </strong>
             {!shown.possible && (
               <span>Only {shown.capacity.toFixed(1)} h left by then</span>
