@@ -236,9 +236,6 @@ export default function DailyGrid({
                 ? `${load === 'heavy' ? `${LOAD_FACES[heatTier(clampHeat((needed - FULL_DAY_HOURS) / 6))]} ` : ''}${shown.perDay.toFixed(1)} h a day`
                 : `${DEAD} RIP`}
             </strong>
-            {!shown.possible && (
-              <span>Only {shown.capacity.toFixed(1)} h left by then</span>
-            )}
           </div>
         )}
       </div>

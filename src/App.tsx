@@ -23,7 +23,6 @@ import {
 import { describeDays, FULL_DAY_HOURS } from './lib/days'
 import { clampHeat, GOAL_HEAT_LABELS, heatColor, heatTier } from './lib/heat'
 import {
-  capacityUntil,
   DAY_LIMIT_HOURS,
   DEAD,
   earliestFinish,
@@ -213,7 +212,7 @@ export default function App() {
   if (canPlan && !earliest)
     planAlert = {
       tone: 'impossible',
-      text: `${DEAD} Only ${trim(capacityUntil(cycle.end, clock))} h left this cycle. ${trim(target)} h? Not in this life.`,
+      text: `${DEAD} ${trim(target)} h? Not in this life.`,
       fixes: [],
     }
   else if (plan && !plan.possible)
@@ -221,14 +220,14 @@ export default function App() {
       tone: 'impossible',
       text:
         plan.perDay > DAY_LIMIT_HOURS
-          ? `${DEAD} ${trim(plan.perDay)} h a day by ${shortDate(plan.date)}? Days have 24. RIP.`
-          : `${DEAD} Only ${trim(plan.capacity)} h left before ${shortDate(plan.date)}, you need ${trim(remaining)}. RIP.`,
+          ? `${DEAD} You’d need ${trim(plan.perDay)}-hour days. RIP.`
+          : `${DEAD} Not enough hours left. RIP.`,
       fixes,
     }
   else if (plan && plan.perDay > REALISTIC_HOURS)
     planAlert = {
       tone: 'heavy',
-      text: `${LOAD_FACES[heatTier(loadHeat)]} ${trim(plan.perDay)} h a day until ${shortDate(plan.date)}. ${heavyJokes[heatTier(loadHeat)]}`,
+      text: `${LOAD_FACES[heatTier(loadHeat)]} ${heavyJokes[heatTier(loadHeat)]}`,
       fixes,
     }
   const best = result.logs
@@ -423,8 +422,7 @@ export default function App() {
             </p>
             {target > cycleCapacity && (
               <p className="goal-note">
-                {DEAD} {cycleCapacity}&thinsp;h max. Afterlife hours don’t
-                count.
+                {DEAD} {trim(target)}&thinsp;h? Afterlife hours don’t count.
               </p>
             )}
             <ul className="progress-caption">
