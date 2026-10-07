@@ -11,21 +11,41 @@ import DailyGrid from './components/DailyGrid'
 import { useLogs } from './hooks/useLogs'
 import { useTween } from './hooks/useTween'
 import {
+  campusHoursElapsed,
   campusToday,
   currentMonth,
   dateKey,
+  daysBetween,
   formatDate,
   getCycle,
   shiftMonth,
 } from './lib/calendar'
-import { describeDays } from './lib/days'
-import { clampHeat, GOAL_HEAT_LABELS, heatColor, heatTier } from './lib/heat'
+import { describeDays, FULL_DAY_HOURS } from './lib/days'
+import {
+  clampHeat,
+  DAY_HEAT_LABELS,
+  GOAL_HEAT_LABELS,
+  heatColor,
+  heatTier,
+} from './lib/heat'
+import {
+  capacityUntil,
+  DAY_LIMIT_HOURS,
+  earliestFinish,
+  finishPlan,
+  REALISTIC_HOURS,
+  type Clock,
+} from './lib/plan'
 import { readSetting, saveSetting, validTarget } from './lib/storage'
 
 const THEME_COLORS = { dark: '#121211', light: '#f3f1ec' }
+const trim = (value: number) => String(Number(value.toFixed(1)))
+const shortDate = (date: Date) =>
+  formatDate(date, { weekday: 'short', month: 'short', day: 'numeric' })
 
 export default function App() {
   const [today, setToday] = useState(campusToday)
+  const [clockHours, setClockHours] = useState(campusHoursElapsed)
   const [month, setMonth] = useState(() => currentMonth(today))
   const [login, setLogin] = useState(() => readSetting('lastLogin'))
   const [submittedLogin, setSubmittedLogin] = useState('')
@@ -36,6 +56,11 @@ export default function App() {
   // Dark is the default; a theme chosen with the toggle is remembered.
   const [dark, setDark] = useState(() => readSetting('theme') !== 'light')
   const [refresh, setRefresh] = useState(0)
+  // An optional day to finish the goal by, kept until it passes.
+  const [finishBy, setFinishBy] = useState<string | null>(
+    () => readSetting('finishBy') || null,
+  )
+  const [preview, setPreview] = useState<string | null>(null)
   const cycle = useMemo(() => getCycle(month), [month])
   const result = useLogs(submittedLogin, month, today, refresh)
   const days = useMemo(
@@ -62,14 +87,13 @@ export default function App() {
   const daysLeft = cycle.days.filter((day) => day >= today).length
 
   useEffect(() => {
-    const timer = window.setInterval(
-      () =>
-        setToday((previous) => {
-          const next = campusToday()
-          return dateKey(previous) === dateKey(next) ? previous : next
-        }),
-      60000,
-    )
+    const timer = window.setInterval(() => {
+      setToday((previous) => {
+        const next = campusToday()
+        return dateKey(previous) === dateKey(next) ? previous : next
+      })
+      setClockHours(campusHoursElapsed())
+    }, 60000)
     return () => window.clearInterval(timer)
   }, [])
   useEffect(() => {
@@ -84,12 +108,17 @@ export default function App() {
     saveSetting('target', String(target))
   }, [target])
   useEffect(() => {
+    saveSetting('finishBy', finishBy ?? '')
+  }, [finishBy])
+  useEffect(() => {
     // Arrow keys move between cycles and T returns to today, outside fields.
     function onKey(event: KeyboardEvent) {
       if (event.altKey || event.ctrlKey || event.metaKey) return
       if (
         event.target instanceof Element &&
-        event.target.closest('input, textarea, select, [contenteditable]')
+        event.target.closest(
+          'input, textarea, select, [contenteditable], .day-pick',
+        )
       )
         return
       if (event.key === 'ArrowLeft') setMonth((value) => shiftMonth(value, -1))
@@ -130,14 +159,85 @@ export default function App() {
 
   const elapsed = started
   const average = elapsed ? total / elapsed : 0
-  const needed = daysLeft ? remaining / daysLeft : 0
+  const todayKey = dateKey(today)
+  const clock: Clock = {
+    today,
+    hoursLeftToday: Math.max(DAY_LIMIT_HOURS - clockHours, 0),
+    loggedToday: result.logs.find((log) => log.date === todayKey)?.hours ?? 0,
+  }
+  const cycleCapacity = DAY_LIMIT_HOURS * cycle.days.length
+  // Finish dates are planned inside the current cycle, from today on, for
+  // goals the cycle can hold at all.
+  const canPlan = active && hasData && remaining > 0 && target <= cycleCapacity
+  const finishDay =
+    canPlan && finishBy
+      ? (cycle.days.find((day) => dateKey(day) === finishBy && day >= today) ??
+        null)
+      : null
+  const finishKey = finishDay ? dateKey(finishDay) : null
+  const plans = canPlan
+    ? new Map(
+        cycle.days
+          .filter((day) => day >= today)
+          .map((day) => [dateKey(day), finishPlan(remaining, day, clock)]),
+      )
+    : null
+  const plan = plans?.get(finishKey ?? dateKey(cycle.end)) ?? null
+  const needed = plan?.perDay ?? (daysLeft ? remaining / daysLeft : 0)
+  const earliest = canPlan ? earliestFinish(remaining, cycle.days, clock) : null
+  const realistic = canPlan
+    ? earliestFinish(remaining, cycle.days, clock, REALISTIC_HOURS)
+    : null
+  const loadHeat = clampHeat((needed - FULL_DAY_HOURS) / 6)
+  // Plans that cannot fit in the hours left are named, with one-click fixes.
+  let planAlert: {
+    tone: 'impossible' | 'heavy'
+    text: string
+    fixes: Array<{ label: string; date: Date }>
+  } | null = null
+  const fixes = [
+    ...(earliest && plan && !plan.possible
+      ? [{ label: 'Earliest possible', date: earliest }]
+      : []),
+    ...(realistic &&
+    plan &&
+    realistic > plan.date &&
+    dateKey(realistic) !== (earliest && dateKey(earliest))
+      ? [{ label: `Realistic, ${REALISTIC_HOURS} h a day`, date: realistic }]
+      : []),
+  ]
+  if (canPlan && !earliest)
+    planAlert = {
+      tone: 'impossible',
+      text: `${trim(target)} h can’t be reached this cycle: only ${capacityUntil(cycle.end, clock).toFixed(1)} h are left in it.`,
+      fixes: [],
+    }
+  else if (plan && !plan.possible)
+    planAlert = {
+      tone: 'impossible',
+      text:
+        plan.perDay > DAY_LIMIT_HOURS
+          ? `Not possible by ${shortDate(plan.date)}: it needs ${plan.perDay.toFixed(1)} h a day, and a day has 24.`
+          : `Not possible by ${shortDate(plan.date)}: only ${plan.capacity.toFixed(1)} h are left until then, and you need ${remaining.toFixed(1)} h.`,
+      fixes,
+    }
+  else if (plan && plan.perDay > REALISTIC_HOURS)
+    planAlert = {
+      tone: 'heavy',
+      text: `${DAY_HEAT_LABELS[heatTier(loadHeat)]}: ${plan.perDay.toFixed(1)} h a day until ${shortDate(plan.date)}.`,
+      fixes,
+    }
   const best = result.logs
     .filter((day) => (day.hours ?? 0) > 0)
     .sort((a, b) => b.hours! - a.hours!)[0]
   const loggedDays = result.logs.filter((day) => (day.hours ?? 0) > 0).length
-  // Pace compares the total with the goal spread evenly, up to mid-today.
+  // Pace compares the total with the goal spread evenly up to the finish
+  // date, measured to mid-today.
+  const planDays = finishDay
+    ? daysBetween(cycle.start, finishDay) + 1
+    : cycle.days.length
   const expected = active
-    ? (target * Math.max(elapsed - 0.5, 0)) / cycle.days.length
+    ? target * Math.min(Math.max(elapsed - 0.5, 0) / planDays, 1)
     : null
   const pace =
     hasData && expected !== null && remaining > 0 ? total - expected : null
@@ -159,9 +259,13 @@ export default function App() {
         ? 'Including today'
         : remaining === 0
           ? 'Goal reached'
-          : needed > average
-            ? `${(needed - average).toFixed(1)} h above average`
-            : 'Under your average'
+          : plan && !plan.possible
+            ? 'More than the time left'
+            : finishDay
+              ? `Until ${shortDate(finishDay)}`
+              : needed > average
+                ? `${(needed - average).toFixed(1)} h above average`
+                : 'Under your average'
 
   return (
     <div className="app-shell">
@@ -300,7 +404,25 @@ export default function App() {
                 />
                 &thinsp;h required
               </span>
+              {finishDay ? (
+                <button
+                  type="button"
+                  className="finish-chip"
+                  title="Finish with the cycle instead"
+                  onClick={() => setFinishBy(null)}
+                >
+                  by {shortDate(finishDay)}
+                  <span aria-hidden="true">×</span>
+                  <span className="sr-only">, clear finish date</span>
+                </button>
+              ) : null}
             </p>
+            {target > cycleCapacity && (
+              <p className="goal-note">
+                This {cycle.days.length}-day cycle holds only {cycleCapacity}
+                &thinsp;h.
+              </p>
+            )}
             <ul className="progress-caption">
               <li className={hasData && remaining === 0 ? 'is-met' : ''}>
                 {hasData
@@ -322,12 +444,34 @@ export default function App() {
               {paceText && (
                 <li
                   className={`pace ${pace! >= -0.5 ? 'is-ahead' : 'is-behind'}`}
-                  title="Compared with your goal spread evenly across the cycle"
+                  title={`Compared with your goal spread evenly until ${finishDay ? shortDate(finishDay) : 'the cycle ends'}`}
                 >
                   {paceText}
                 </li>
               )}
             </ul>
+            {planAlert && (
+              <div
+                className={`plan-alert is-${planAlert.tone}`}
+                style={
+                  planAlert.tone === 'heavy'
+                    ? ({ '--heat': heatColor(loadHeat) } as CSSProperties)
+                    : undefined
+                }
+              >
+                <p>{planAlert.text}</p>
+                {planAlert.fixes.map((fix) => (
+                  <button
+                    key={fix.label}
+                    type="button"
+                    className="fix-button"
+                    onClick={() => setFinishBy(dateKey(fix.date))}
+                  >
+                    {fix.label}: {shortDate(fix.date)}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div className="stats">
             <article className="stat-card">
@@ -343,12 +487,23 @@ export default function App() {
                   ? 'Cycle ended'
                   : future
                     ? 'Not started'
-                    : `${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left`}
+                    : finishDay && plan
+                      ? `${plan.days} ${plan.days === 1 ? 'day' : 'days'} to your date`
+                      : `${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left`}
               </small>
             </article>
             <article className="stat-card">
               <h3>Needed per day</h3>
-              <p>
+              <p
+                className={
+                  plan && !plan.possible
+                    ? 'is-impossible'
+                    : needed > REALISTIC_HOURS
+                      ? 'is-heavy'
+                      : undefined
+                }
+                style={{ '--heat': heatColor(loadHeat) } as CSSProperties}
+              >
                 {hasData && active ? needed.toFixed(1) : '—'}
                 <span className="unit">h</span>
               </p>
@@ -416,6 +571,9 @@ export default function App() {
                 </button>
               )}
             </div>
+            {canPlan && !finishDay && (
+              <p className="finish-hint">Pick a day below to finish early</p>
+            )}
             <ul className="legend" aria-hidden="true">
               <li className="legend-logged">
                 {hasDailyData ? loggedDays : '—'} of {cycle.days.length} days
@@ -429,7 +587,11 @@ export default function App() {
           </div>
           <DailyGrid
             days={days}
-            needed={hasData && active && remaining > 0 ? needed : null}
+            plans={plans}
+            finishKey={finishKey}
+            preview={preview}
+            onPreview={setPreview}
+            onPick={setFinishBy}
           />
         </section>
       </main>

@@ -110,6 +110,57 @@ test('mobile cycle navigation and layout', async ({ page }) => {
   ).toBe(true)
 })
 
+test('pick a finish date from the chart on desktop and phone', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await page.getByLabel('Your campus login').fill('test-student')
+  await page.getByRole('button', { name: 'Check hours' }).click()
+  await expect(page.getByRole('status')).toContainText(
+    'Loaded for test-student',
+  )
+  await expect(page.getByText('Pick a day below to finish early')).toBeVisible()
+  const sep20 = page.getByRole('button', { name: /Finish by Sunday, Sep 20/ })
+  await sep20.click()
+  await expect(
+    page.getByRole('button', { name: /by Sun, Sep 20/ }),
+  ).toBeVisible()
+  await expect(page.locator('.stats')).toContainText('Until Sun, Sep 20')
+  await expect(page.locator('.day-card.is-finish')).toHaveCount(1)
+  // Arrow keys move between days in the chart instead of changing cycles.
+  await sep20.press('ArrowRight')
+  await expect(
+    page.getByRole('button', { name: /Finish by Monday, Sep 21/ }),
+  ).toBeFocused()
+  await expect(page.locator('.cycle-control')).toContainText('Aug 28 — Sep 27')
+  await page.keyboard.press('Escape')
+  await expect(page.getByText('Pick a day below to finish early')).toBeVisible()
+
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.getByRole('button', { name: /Finish by Thursday, Sep 10/ }).click()
+  await expect(page.locator('.plan-alert')).toContainText(
+    'Not possible by Thu, Sep 10',
+  )
+  await page.getByRole('button', { name: /Earliest possible/ }).click()
+  await expect(
+    page.getByRole('button', { name: /by Fri, Sep 11/ }),
+  ).toBeVisible()
+  const fits = await page.evaluate(() =>
+    [...document.querySelectorAll('.day-card, .stat-card, .controls')].every(
+      (card) => {
+        const rect = card.getBoundingClientRect()
+        return (
+          rect.bottom <= window.innerHeight &&
+          card.scrollWidth <= card.clientWidth &&
+          document.documentElement.scrollWidth <= window.innerWidth
+        )
+      },
+    ),
+  )
+  expect(fits).toBe(true)
+  await page.screenshot({ path: 'test-results/finish-date-mobile.png' })
+})
+
 test('partial failures and recovery do not invent missing hours', async ({
   page,
 }) => {

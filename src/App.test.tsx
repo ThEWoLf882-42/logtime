@@ -204,6 +204,88 @@ describe('dashboard', () => {
     )
     expect(document.querySelector('.day-over')).toHaveTextContent('+5.0h')
   })
+  it('plans a finish date picked from the chart and offers fixes when impossible', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url, options) => {
+        const { startDate, endDate } = JSON.parse(options.body)
+        return {
+          ok: true,
+          json: async () => ({ totalHours: startDate === endDate ? 2 : 42 }),
+        }
+      }),
+    )
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Your campus login'), {
+      target: { value: 'student' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /Check hours/ }))
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'Loaded for student',
+      ),
+    )
+    expect(screen.getByText('Pick a day below to finish early')).toBeVisible()
+    // 13:00 on campus: 11 h are left today, so 58 h cannot fit by tomorrow.
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Finish by Thursday, Sep 10: not possible',
+      }),
+    )
+    expect(document.querySelector('.plan-alert')).toHaveTextContent(
+      'Not possible by Thu, Sep 10: it needs 29.0 h a day, and a day has 24.',
+    )
+    expect(
+      screen.getByRole('button', { name: 'Earliest possible: Fri, Sep 11' }),
+    ).toBeVisible()
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Realistic, 12 h a day: Sun, Sep 13',
+      }),
+    )
+    expect(screen.getByRole('button', { name: /by Sun, Sep 13/ })).toBeVisible()
+    expect(document.querySelector('.plan-alert')).toBeNull()
+    expect(localStorage.getItem('logtime.finishBy')).toBe('2026-09-13')
+    expect(document.querySelector('.day-card.is-finish time')).toHaveAttribute(
+      'datetime',
+      '2026-09-13',
+    )
+    fireEvent.click(screen.getByRole('button', { name: /clear finish date/ }))
+    expect(screen.getByText('Pick a day below to finish early')).toBeVisible()
+    expect(localStorage.getItem('logtime.finishBy')).toBe('')
+  })
+  it('names goals that cannot fit in the cycle', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url, options) => {
+        const { startDate, endDate } = JSON.parse(options.body)
+        return {
+          ok: true,
+          json: async () => ({ totalHours: startDate === endDate ? 2 : 42 }),
+        }
+      }),
+    )
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Required hours'), {
+      target: { value: '999' },
+    })
+    expect(document.querySelector('.goal-note')).toHaveTextContent(
+      /This 31-day cycle holds only 744\s?h\./,
+    )
+    fireEvent.change(screen.getByLabelText('Required hours'), {
+      target: { value: '500' },
+    })
+    expect(document.querySelector('.goal-note')).toBeNull()
+    fireEvent.change(screen.getByLabelText('Your campus login'), {
+      target: { value: 'student' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /Check hours/ }))
+    await waitFor(() =>
+      expect(document.querySelector('.plan-alert')).toHaveTextContent(
+        '500 h can’t be reached this cycle: only 443.0 h are left in it.',
+      ),
+    )
+  })
   it('shows the API total even when all daily requests fail', async () => {
     vi.stubGlobal(
       'fetch',

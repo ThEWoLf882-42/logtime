@@ -23,6 +23,22 @@ export function campusToday(now = new Date()) {
   return new Date(Date.UTC(part('year'), part('month') - 1, part('day')))
 }
 
+/** Hours already passed in today's campus day, from 0 up to 24. */
+export function campusHoursElapsed(now = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Africa/Casablanca',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(now)
+  const part = (type: string) =>
+    Number(parts.find((p) => p.type === type)?.value)
+  return part('hour') + part('minute') / 60
+}
+
+export const daysBetween = (from: Date, to: Date) =>
+  Math.round((to.getTime() - from.getTime()) / 86400000)
+
 export function currentMonth(today: Date) {
   return new Date(
     Date.UTC(

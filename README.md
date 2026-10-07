@@ -17,6 +17,10 @@ The design is a quiet ledger: ink, paper, and hairline rules carry the interface
 
 Daily hours form a column chart on one shared hour scale, with a dashed line at 12 hours. Future days (and today) show a dashed outline of the hours each remaining day needs. On narrow screens the chart becomes a ledger of rows in two or three columns. Days past 12 hours draw their extra hours in heat colors, from hot orange through red and crimson to violet at 18 hours or more (Overtime, Heavy overtime, Extreme overtime). Past the required hours, the goal scale extends and the overrun is drawn in the same heat colors, labeled Over goal, Well over goal, or Far over goal; the most extreme levels pulse.
 
+To finish early, pick a day in the chart (or a row in the ledger): hovering or focusing a day previews how many hours each day would then need, and clicking it sets it as your finish date, shown as a removable chip in the headline. Needed per day, the even-pace mark, and the dashed outlines of needed hours all follow that date, and days after it are dimmed. With the keyboard, arrow keys move between days, Enter picks, and Escape clears. The date is remembered in this browser until it passes.
+
+Plans are checked against physical time: campus is open around the clock, so a day holds at most 24 hours, and today only has what is left of it in campus time. A finish date that cannot fit the remaining hours is named as not possible, with one-click fixes for the earliest possible date (24 hours a day) and a realistic one (12 hours a day); plans needing more than 12 hours a day are flagged as overtime. A requirement larger than the cycle itself (24 hours times its days) is named under the goal. These checks apply to the plan, not to the hours the API reports.
+
 Days fill in as their requests finish, and a thin line at the top of the page shows loading progress.
 
 The dark theme is the default; your login, required hours, and theme are remembered in this browser. A saved login is only sent after you select **Check hours**. Hour records are kept in memory.
@@ -49,4 +53,4 @@ Responses may contain arrays or `data`, `logs`, or `hydra:member` wrappers. Hour
 
 Daily requests run four at a time alongside one cycle-total request. Each request times out after 15 seconds and cancels when the login or cycle changes. Complete results are cached in memory for one minute (up to 12 entries). **Refresh** bypasses the cache; **Retry** reloads the cycle. Future days are not requested individually, and upcoming cycles make no requests.
 
-The UI is in `src/App.tsx`, with the goal scale in `src/components/Ruler.tsx` and the daily chart in `src/components/DailyGrid.tsx`; day states come from `src/lib/days.ts` and overrun colors from `src/lib/heat.ts`. Request handling is in `src/hooks/useLogs.ts`, and API/calendar helpers are in `src/lib/`.
+Finish-date math is in `src/lib/plan.ts`. The UI is in `src/App.tsx`, with the goal scale in `src/components/Ruler.tsx` and the daily chart in `src/components/DailyGrid.tsx`; day states come from `src/lib/days.ts` and overrun colors from `src/lib/heat.ts`. Request handling is in `src/hooks/useLogs.ts`, and API/calendar helpers are in `src/lib/`.
