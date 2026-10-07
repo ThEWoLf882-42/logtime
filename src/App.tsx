@@ -31,7 +31,12 @@ import {
   REALISTIC_HOURS,
   type Clock,
 } from './lib/plan'
-import { readSetting, saveSetting, validTarget } from './lib/storage'
+import {
+  DEFAULT_TARGET,
+  readSetting,
+  saveSetting,
+  validTarget,
+} from './lib/storage'
 
 const THEME_COLORS = { dark: '#121211', light: '#f3f1ec' }
 const trim = (value: number) => String(Number(value.toFixed(1)))
@@ -45,7 +50,7 @@ export default function App() {
   const [login, setLogin] = useState(() => readSetting('lastLogin'))
   const [submittedLogin, setSubmittedLogin] = useState('')
   const [target, setTarget] = useState(() =>
-    validTarget(readSetting('target', '100')),
+    validTarget(readSetting('target', String(DEFAULT_TARGET))),
   )
   const [targetInput, setTargetInput] = useState(String(target))
   // Dark is the default; a theme chosen with the toggle is remembered.
@@ -99,9 +104,6 @@ export default function App() {
       ?.setAttribute('content', THEME_COLORS[theme])
     saveSetting('theme', theme)
   }, [dark])
-  useEffect(() => {
-    saveSetting('target', String(target))
-  }, [target])
   useEffect(() => {
     saveSetting('finishBy', finishBy ?? '')
   }, [finishBy])
@@ -400,8 +402,11 @@ export default function App() {
                       Number.isFinite(Number(value)) &&
                       Number(value) >= 1 &&
                       Number(value) <= 999
-                    )
+                    ) {
+                      // Saved only when edited, so the default can change later.
                       setTarget(Number(value))
+                      saveSetting('target', value)
+                    }
                   }}
                   onBlur={() => setTargetInput(String(target))}
                 />

@@ -11,7 +11,7 @@ npm ci
 npm run dev
 ```
 
-Enter your login, set your required hours (100 by default), and select **Check hours**. The page shows every day in the selected cycle, alongside logged hours, hours remaining, progress, daily average, best day, and hours needed per day. Use the arrows (or the ← and → keys, and T for today) to check another cycle. There is no header or collapsed breakdown; the daily grid is always visible.
+Enter your login, set your required hours (120 by default), and select **Check hours**. The page shows every day in the selected cycle, alongside logged hours, hours remaining, progress, daily average, best day, and hours needed per day. Use the arrows (or the ← and → keys, and T for today) to check another cycle. There is no header or collapsed breakdown; the daily grid is always visible.
 
 The design is a quiet ledger: ink, paper, and hairline rules carry the interface, one typeface (Archivo, condensed for figures) sets everything, and color is reserved for data, with cobalt for logged hours and heat colors for overruns. The headline shows the cycle total against the required hours, which you can edit in place. Below it, a scale fills toward the goal and marks where an even pace would put you today; the caption states how far ahead or behind you are. Remaining, needed per day, daily average, and best day follow.
 

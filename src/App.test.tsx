@@ -15,6 +15,9 @@ describe('dashboard', () => {
       'No data loaded',
     )
     expect(fetchMock).not.toHaveBeenCalled()
+    // 120 h by default, and nothing is saved until the goal is edited.
+    expect(screen.getByLabelText('Required hours')).toHaveValue(120)
+    expect(localStorage.getItem('logtime.target')).toBeNull()
     fireEvent.change(screen.getByLabelText('Required hours'), {
       target: { value: '150' },
     })
@@ -71,7 +74,7 @@ describe('dashboard', () => {
     )
     expect(screen.getByRole('progressbar')).toHaveAttribute(
       'aria-valuetext',
-      '42.0 of 100 hours',
+      '42.0 of 120 hours',
     )
   })
   it('prevents an old login response from overwriting a newer one', async () => {
@@ -129,9 +132,9 @@ describe('dashboard', () => {
     expect(document.querySelectorAll('.day-card.is-unknown')).toHaveLength(1)
     expect(screen.getByRole('progressbar')).toHaveAttribute(
       'aria-valuetext',
-      '42.0 of 100 hours',
+      '42.0 of 120 hours',
     )
-    expect(document.querySelector('.remaining')).toHaveTextContent('58.0')
+    expect(document.querySelector('.remaining')).toHaveTextContent('78.0')
     expect(document.querySelectorAll('.day-card.is-zero')).toHaveLength(
       count - 1,
     )
@@ -170,7 +173,7 @@ describe('dashboard', () => {
     await waitFor(() =>
       expect(screen.getByRole('progressbar')).toHaveAttribute(
         'aria-valuetext',
-        '42.0 of 100 hours',
+        '42.0 of 120 hours',
       ),
     )
   })
@@ -181,7 +184,7 @@ describe('dashboard', () => {
         const { startDate, endDate } = JSON.parse(options.body)
         return {
           ok: true,
-          json: async () => ({ totalHours: startDate === endDate ? 17 : 160 }),
+          json: async () => ({ totalHours: startDate === endDate ? 17 : 180 }),
         }
       }),
     )
@@ -226,29 +229,29 @@ describe('dashboard', () => {
       ),
     )
     expect(screen.getByText('Pick a day below to finish early')).toBeVisible()
-    // 13:00 on campus: 11 h are left today, so 58 h cannot fit by tomorrow.
+    // 13:00 on campus: 11 h are left today, so 78 h cannot fit by tomorrow.
     fireEvent.click(
       screen.getByRole('button', {
         name: 'Finish by Thursday, Sep 10: not possible',
       }),
     )
     expect(document.querySelector('.plan-alert')).toHaveTextContent(
-      '💀 You’d need 29-hour days. RIP.',
+      '💀 You’d need 39-hour days. RIP.',
     )
     expect(
-      screen.getByRole('button', { name: 'No sleep: Fri, Sep 11' }),
+      screen.getByRole('button', { name: 'No sleep: Sat, Sep 12' }),
     ).toBeVisible()
     fireEvent.click(
       screen.getByRole('button', {
-        name: 'Survivable: Sun, Sep 13',
+        name: 'Survivable: Tue, Sep 15',
       }),
     )
-    expect(screen.getByRole('button', { name: /by Sun, Sep 13/ })).toBeVisible()
+    expect(screen.getByRole('button', { name: /by Tue, Sep 15/ })).toBeVisible()
     expect(document.querySelector('.plan-alert')).toBeNull()
-    expect(localStorage.getItem('logtime.finishBy')).toBe('2026-09-13')
+    expect(localStorage.getItem('logtime.finishBy')).toBe('2026-09-15')
     expect(document.querySelector('.day-card.is-finish time')).toHaveAttribute(
       'datetime',
-      '2026-09-13',
+      '2026-09-15',
     )
     fireEvent.click(screen.getByRole('button', { name: /clear finish date/ }))
     expect(screen.getByText('Pick a day below to finish early')).toBeVisible()
@@ -308,9 +311,9 @@ describe('dashboard', () => {
     )
     expect(screen.getByRole('progressbar')).toHaveAttribute(
       'aria-valuetext',
-      '42.0 of 100 hours',
+      '42.0 of 120 hours',
     )
-    expect(document.querySelector('.remaining')).toHaveTextContent('58.0')
+    expect(document.querySelector('.remaining')).toHaveTextContent('78.0')
     expect(document.querySelectorAll('.day-card.is-unknown')).toHaveLength(13)
   })
 })

@@ -12,7 +12,12 @@ export function saveSetting(key: string, value: string) {
     /* Browsing still works when storage is disabled. */
   }
 }
+// Required hours per cycle until someone sets their own.
+export const DEFAULT_TARGET = 120
+
 export function validTarget(value: string) {
   const number = Number(value)
-  return Number.isFinite(number) && number >= 1 && number <= 999 ? number : 100
+  return Number.isFinite(number) && number >= 1 && number <= 999
+    ? number
+    : DEFAULT_TARGET
 }

@@ -37,9 +37,9 @@ test('check progress, keep every day visible, and save preferences', async ({
   )
   await expect(page.getByRole('progressbar')).toHaveAttribute(
     'aria-valuetext',
-    '42.0 of 100 hours',
+    '42.0 of 120 hours',
   )
-  await expect(page.locator('.remaining')).toContainText('58.0')
+  await expect(page.locator('.remaining')).toContainText('78.0')
   await expect(page.locator('.day-card')).toHaveCount(31)
   await expect(page.locator('.day-card.is-logged')).toHaveCount(13)
   await expect(page.locator('.day-card.is-future')).toHaveCount(18)
@@ -139,11 +139,11 @@ test('pick a finish date from the chart on desktop and phone', async ({
   await page.setViewportSize({ width: 375, height: 812 })
   await page.getByRole('button', { name: /Finish by Thursday, Sep 10/ }).click()
   await expect(page.locator('.plan-alert')).toContainText(
-    'You’d need 29-hour days. RIP.',
+    'You’d need 39-hour days. RIP.',
   )
   await page.getByRole('button', { name: /No sleep/ }).click()
   await expect(
-    page.getByRole('button', { name: /by Fri, Sep 11/ }),
+    page.getByRole('button', { name: /by Sat, Sep 12/ }),
   ).toBeVisible()
   const fits = await page.evaluate(() =>
     [...document.querySelectorAll('.day-card, .stat-card, .controls')].every(
@@ -188,9 +188,9 @@ test('partial failures and recovery do not invent missing hours', async ({
   await expect(page.getByRole('status')).toContainText('1 day unavailable')
   await expect(page.getByRole('progressbar')).toHaveAttribute(
     'aria-valuetext',
-    '42.0 of 100 hours',
+    '42.0 of 120 hours',
   )
-  await expect(page.locator('.remaining')).toContainText('58.0')
+  await expect(page.locator('.remaining')).toContainText('78.0')
   await expect(
     page.locator('.day-status').filter({ hasText: /^Unavailable$/ }),
   ).toHaveCount(1)
@@ -198,7 +198,7 @@ test('partial failures and recovery do not invent missing hours', async ({
   await page.getByRole('button', { name: 'Retry' }).click()
   await expect(page.getByRole('progressbar')).toHaveAttribute(
     'aria-valuetext',
-    '42.0 of 100 hours',
+    '42.0 of 120 hours',
   )
   await page.getByRole('button', { name: 'Next cycle' }).click()
   await expect(page.getByRole('status')).toContainText(
