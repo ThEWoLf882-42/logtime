@@ -611,7 +611,14 @@ export default function App() {
         </p>
         <p className="signature">
           made with <span className="signature-love">love</span> by{' '}
-          <span className="signature-name">Aymane Gimi</span>
+          <span
+            className="signature-name"
+            onClick={() =>
+              window.open('https://profile-v3.intra.42.fr/users/agimi')
+            }
+          >
+            Aymane Gimi
+          </span>
         </p>
       </footer>
     </div>
