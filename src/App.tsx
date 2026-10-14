@@ -611,27 +611,7 @@ export default function App() {
         </p>
         <p className="signature">
           made with <span className="signature-love">love</span> by{' '}
-          <span
-            className="signature-name"
-            onClick={() =>
-              window.open(
-                'https://profile-v3.intra.42.fr/users/agimi',
-                '_blank',
-              )
-            }
-            onhover={(event) => {
-              event.target.style.textDecoration = 'underline'
-              event.target.style.cursor = 'pointer'
-              event.target.style.color = '#270125'
-            }}
-            onmouseleave={(event) => {
-              event.target.style.textDecoration = 'none'
-              event.target.style.cursor = 'default'
-              event.target.style.color = 'inherit'
-            }}
-          >
-            Aymane Gimi
-          </span>
+          <span className="signature-name">Aymane Gimi</span>
         </p>
       </footer>
     </div>

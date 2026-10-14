@@ -8,4 +8,3 @@ test-results/
 playwright-report/
 *.tsbuildinfo
 !.env.example
-.claude/launch.json
