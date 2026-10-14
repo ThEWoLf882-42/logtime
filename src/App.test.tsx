@@ -41,6 +41,17 @@ describe('dashboard', () => {
     render(<App />)
     expect(document.documentElement.dataset.theme).toBe('light')
   })
+  it('links the signature to the author’s intra profile in a new tab', () => {
+    vi.stubGlobal('fetch', vi.fn())
+    render(<App />)
+    const link = screen.getByRole('link', { name: /Aymane Gimi/ })
+    expect(link).toHaveAttribute(
+      'href',
+      'https://profile-v3.intra.42.fr/users/agimi',
+    )
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+  })
   it('shows failure without invented zero totals and supports retry', async () => {
     const fetchMock = vi.fn().mockRejectedValue(new Error('offline'))
     vi.stubGlobal('fetch', fetchMock)

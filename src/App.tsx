@@ -611,7 +611,14 @@ export default function App() {
         </p>
         <p className="signature">
           made with <span className="signature-love">love</span> by{' '}
-          <span className="signature-name">Aymane Gimi</span>
+          <a
+            className="signature-name"
+            href="https://profile-v3.intra.42.fr/users/agimi"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Aymane Gimi<span className="sr-only"> (opens in a new tab)</span>
+          </a>
         </p>
       </footer>
     </div>
