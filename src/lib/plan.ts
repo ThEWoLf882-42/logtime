@@ -23,7 +23,7 @@ export type FinishPlan = {
   key: string
   /** Days from today through the finish date, inclusive. */
   days: number
-  /** Daily total needed after today; includes logged hours for a today-only plan. */
+  /** Additional hours per full remaining day, or the shortfall for a today-only plan. */
   perDay: number
   /** Additional hours to log today; already logged hours are not counted again. */
   todayNeeded: number
@@ -51,10 +51,7 @@ export function capacityUntil(
   const slots = Math.ceil(
     Math.max(Math.min(clock.hoursLeftToday, DAY_LIMIT_HOURS), 0),
   )
-  const todayRoom =
-    perDay >= DAY_LIMIT_HOURS
-      ? slots
-      : Math.max(Math.min(perDay - clock.loggedToday, slots), 0)
+  const todayRoom = Math.min(perDay, slots)
   return todayRoom + perDay * (days - 1)
 }
 
@@ -68,29 +65,21 @@ export function finishPlan(
   const hours = Math.max(remaining, 0)
   const futureDays = Math.max(days - 1, 0)
   const todayRoom = capacityUntil(clock.today, clock)
-  // Balance today's total (including logged hours) against future daily totals.
-  // Once today's remaining credit slots are used, spread the rest over full days.
+  // Spread only the remaining hours. Already reported hours have been counted
+  // in the cycle total and must not reduce today's share a second time.
+  // If today's share exceeds its credit slots, spread that excess over future days.
   const todayNeeded =
     days === 0
       ? 0
       : futureDays === 0
         ? hours
-        : Math.max(
-            Math.min(
-              Math.max(
-                (hours - futureDays * clock.loggedToday) / days,
-                hours - futureDays * DAY_LIMIT_HOURS,
-              ),
-              todayRoom,
-            ),
-            0,
-          )
+        : Math.min(hours / days, todayRoom)
   const todayTotal = clock.loggedToday + todayNeeded
   const perDay =
     hours === 0 || days === 0
       ? 0
       : futureDays === 0
-        ? todayTotal
+        ? hours
         : (hours - todayNeeded) / futureDays
   return {
     date,

@@ -318,7 +318,7 @@ describe('dashboard', () => {
       screen.getByRole('heading', { name: 'Needed today' }).closest('article'),
     ).toHaveTextContent('24.0')
     expect(document.querySelector('.plan-alert')).toHaveTextContent(
-      'You’d need 33-hour days',
+      'Not enough hours left',
     )
   })
   it('does not treat unavailable hours today as zero for planning', async () => {
@@ -350,6 +350,48 @@ describe('dashboard', () => {
     expect(screen.queryByRole('button', { name: /Finish by/ })).toBeNull()
     expect(document.querySelector('.remaining')).toHaveTextContent('24.0')
   })
+  it.each([9, 36])(
+    'uses today’s last hour for a 2-hour shortfall despite %s reported today',
+    async (reportedToday) => {
+      vi.setSystemTime(new Date('2026-11-09T23:59:59Z'))
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (_url, options) => {
+          const { startDate, endDate } = JSON.parse(options.body)
+          return {
+            ok: true,
+            json: async () => ({
+              totalHours: startDate === endDate ? reportedToday : 118,
+            }),
+          }
+        }),
+      )
+      render(<App />)
+      fireEvent.change(screen.getByLabelText('Your campus login'), {
+        target: { value: 'student' },
+      })
+      fireEvent.click(screen.getByRole('button', { name: /Check hours/ }))
+      fireEvent.click(
+        await screen.findByRole('button', {
+          name: 'Finish by Tuesday, Nov 10: 1.0 h a day, 1.0 h more today',
+        }),
+      )
+      const needed = screen
+        .getByRole('heading', { name: 'Needed per day' })
+        .closest('article')!
+      expect(needed.querySelector('p')).toHaveTextContent('1.0')
+      expect(needed).toHaveTextContent('+1 h today')
+      expect(document.querySelector('.remaining')).toHaveTextContent('2.0')
+      expect(
+        document.querySelector('.day-card.is-today .day-hours'),
+      ).toHaveTextContent(reportedToday.toFixed(1))
+      expect(document.querySelector('.plan-alert')).toBeNull()
+      expect(screen.getByRole('progressbar')).toHaveAttribute(
+        'aria-valuetext',
+        '118.0 of 120 hours',
+      )
+    },
+  )
   it('updates expected hours as campus time advances', () => {
     vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
     vi.setSystemTime(new Date('2026-09-09T00:00:00Z'))

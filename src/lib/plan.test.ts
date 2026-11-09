@@ -28,8 +28,8 @@ describe('finish plans', () => {
     expect(capacityUntil(day('2026-09-08'), clock)).toBe(0)
     expect(capacityUntil(day('2026-09-09'), clock)).toBe(11)
     expect(capacityUntil(day('2026-09-10'), clock)).toBe(35)
-    // At twelve hours a day, today only has 10 of its 12 left to give.
-    expect(capacityUntil(day('2026-09-10'), clock, 12)).toBe(22)
+    // Already logged hours do not consume any remaining prediction slots.
+    expect(capacityUntil(day('2026-09-10'), clock, 12)).toBe(23)
   })
   it('flags plans that need more hours than are left', () => {
     expect(finishPlan(30, day('2026-09-10'), clock)).toMatchObject({
@@ -58,16 +58,16 @@ describe('finish plans', () => {
       remaining: 24,
       logged: 9,
       left: 15,
-      perDay: 16.5,
-      todayNeeded: 7.5,
+      perDay: 12,
+      todayNeeded: 12,
       possible: true,
     },
     {
       remaining: 4,
       logged: 9,
       left: 10,
-      perDay: 4,
-      todayNeeded: 0,
+      perDay: 2,
+      todayNeeded: 2,
       possible: true,
     },
     {
@@ -132,14 +132,14 @@ describe('finish plans', () => {
     const now = { ...clock, loggedToday: 9, hoursLeftToday: 1 }
     expect(finishPlan(1, clock.today, now)).toMatchObject({
       days: 1,
-      perDay: 10,
+      perDay: 1,
       todayNeeded: 1,
       todayTotal: 10,
       possible: true,
     })
     expect(finishPlan(2, clock.today, now)).toMatchObject({
       days: 1,
-      perDay: 11,
+      perDay: 2,
       todayNeeded: 2,
       possible: false,
     })
@@ -221,6 +221,22 @@ describe('finish plans', () => {
     })
     expect(finishPlan(26, day('2026-09-10'), late).possible).toBe(false)
   })
+  it.each([0, 9, 24, 36])(
+    'shares a 2-hour shortfall across today and tomorrow with %s reported today',
+    (loggedToday) => {
+      const now = { ...clock, hoursLeftToday: 1 / 60, loggedToday }
+      expect(finishPlan(2, day('2026-09-10'), now)).toMatchObject({
+        todayNeeded: 1,
+        perDay: 1,
+        todayTotal: loggedToday + 1,
+        possible: true,
+      })
+      expect(capacityUntil(day('2026-09-10'), now, 1)).toBe(2)
+      expect(
+        finishPlan(2, day('2026-09-10'), { ...now, hoursLeftToday: 0 }),
+      ).toMatchObject({ todayNeeded: 0, perDay: 2 })
+    },
+  )
 })
 
 describe('expected hours', () => {

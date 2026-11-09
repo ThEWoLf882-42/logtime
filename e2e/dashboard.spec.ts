@@ -262,7 +262,9 @@ test('late-night plan keeps already logged hours separate from the remaining wor
   await expect(
     page.getByRole('heading', { name: 'Needed today' }),
   ).toBeVisible()
-  await expect(page.locator('.plan-alert')).toContainText('33-hour days')
+  await expect(page.locator('.plan-alert')).toContainText(
+    'Not enough hours left',
+  )
 })
 
 for (const timezoneId of ['UTC', 'America/New_York', 'Asia/Tokyo']) {
@@ -328,6 +330,40 @@ test('prediction keeps the unfinished hour and trusts a reported 36-hour day', a
       .filter({ has: page.locator('time[datetime="2026-11-09"]') })
       .getByRole('button'),
   ).toHaveCount(0)
+})
+
+test('two hours remaining uses one hour today and one tomorrow', async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date('2026-11-09T23:59:59Z'))
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.route('**/api/get_log', (route) => {
+    const { startDate, endDate } = route.request().postDataJSON()
+    return route.fulfill({
+      json: { totalHours: startDate === endDate ? 36 : 118 },
+    })
+  })
+  await page.goto('/')
+  await page.getByLabel('Your campus login').fill('test-student')
+  await page.getByRole('button', { name: 'Check hours' }).click()
+  await page
+    .getByRole('button', {
+      name: 'Finish by Tuesday, Nov 10: 1.0 h a day, 1.0 h more today',
+    })
+    .click()
+  const needed = page
+    .locator('.stat-card')
+    .filter({ has: page.getByRole('heading', { name: 'Needed per day' }) })
+  await expect(needed.locator('p')).toContainText('1.0')
+  await expect(needed.locator('.today-needed')).toHaveText('+1 h today')
+  await expect(needed.locator('.today-needed')).toBeVisible()
+  await expect(page.locator('.remaining')).toHaveText('2.0')
+  await expect(page.locator('.day-card.is-today .day-hours')).toHaveText('36.0')
+  await expect(page.getByRole('progressbar')).toHaveAttribute(
+    'aria-valuetext',
+    '118.0 of 120 hours',
+  )
+  await expect(page.locator('.plan-alert')).toHaveCount(0)
 })
 
 test('all daily cards fit the viewport and dark background fills the page', async ({
