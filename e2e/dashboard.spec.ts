@@ -139,7 +139,7 @@ test('pick a finish date from the chart on desktop and phone', async ({
   await page.setViewportSize({ width: 375, height: 812 })
   await page.getByRole('button', { name: /Finish by Thursday, Sep 10/ }).click()
   await expect(page.locator('.plan-alert')).toContainText(
-    'You’d need 39-hour days. RIP.',
+    'You’d need 67-hour days. RIP.',
   )
   await page.getByRole('button', { name: /No sleep/ }).click()
   await expect(
@@ -209,6 +209,82 @@ test('partial failures and recovery do not invent missing hours', async ({
     'No data loaded',
   )
 })
+
+test('late-night plan keeps already logged hours separate from the remaining workload', async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date('2026-11-09T23:04:00Z'))
+  await page.route('**/api/get_log', (route) => {
+    const { startDate, endDate } = route.request().postDataJSON()
+    return route.fulfill({
+      json: { totalHours: startDate === endDate ? 9 : 96 },
+    })
+  })
+  await page.goto('/')
+  await page.getByLabel('Your campus login').fill('test-student')
+  await page.getByRole('button', { name: 'Check hours' }).click()
+  await page
+    .getByRole('button', {
+      name: 'Finish by Tuesday, Nov 10: 23.1 hours a day, 0.9 more today',
+    })
+    .click()
+  const needed = page
+    .locator('.stat-card')
+    .filter({ has: page.getByRole('heading', { name: 'Needed per day' }) })
+  await expect(needed.locator('p')).toContainText('23.1')
+  await expect(needed).toContainText('+0.9 h today')
+  await expect(needed.locator('.today-needed')).toBeVisible()
+  await expect(page.locator('.remaining')).toHaveText('24.0')
+  for (const [width, height] of [
+    [1366, 768],
+    [375, 812],
+    [320, 740],
+  ]) {
+    await page.setViewportSize({ width, height })
+    await expect(needed.locator('.today-needed')).toBeVisible()
+    expect(
+      await page.evaluate(() => ({
+        width: document.documentElement.scrollWidth <= window.innerWidth,
+        height: document.documentElement.scrollHeight <= window.innerHeight,
+        stats: [...document.querySelectorAll('.stat-card')].every(
+          (card) =>
+            card.scrollHeight <= card.clientHeight &&
+            card.scrollWidth <= card.clientWidth,
+        ),
+      })),
+      `${width}x${height}`,
+    ).toEqual({ width: true, height: true, stats: true })
+  }
+  await page.screenshot({ path: 'test-results/late-night-plan-mobile.png' })
+  await page
+    .getByRole('button', { name: 'Finish by Monday, Nov 9: not possible' })
+    .click()
+  await expect(
+    page.getByRole('heading', { name: 'Needed today' }),
+  ).toBeVisible()
+  await expect(page.locator('.plan-alert')).toContainText('33-hour days')
+})
+
+for (const timezoneId of ['UTC', 'America/New_York', 'Asia/Tokyo']) {
+  test.describe(`campus date from ${timezoneId}`, () => {
+    test.use({ timezoneId })
+    test('does not advance November dates at 23:00', async ({ page }) => {
+      for (const [instant, expectedDate] of [
+        ['2026-11-09T22:59:59Z', '2026-11-09'],
+        ['2026-11-09T23:00:00Z', '2026-11-09'],
+        ['2026-11-09T23:59:59Z', '2026-11-09'],
+        ['2026-11-10T00:00:00Z', '2026-11-10'],
+      ]) {
+        await page.clock.setFixedTime(new Date(instant))
+        await page.goto('/')
+        await expect(page.locator('.day-card.is-today time')).toHaveAttribute(
+          'datetime',
+          expectedDate,
+        )
+      }
+    })
+  })
+}
 
 test('all daily cards fit the viewport and dark background fills the page', async ({
   page,

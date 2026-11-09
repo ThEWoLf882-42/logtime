@@ -48,6 +48,7 @@ export default function DailyGrid({
   const peak = Math.max(
     FULL_DAY_HOURS,
     drawnNeed,
+    shown ? Math.min(shown.todayTotal, NEED_CAP_HOURS) : 0,
     ...days.map((day) => day.hours ?? 0),
   )
   const scale = Math.ceil(peak / AXIS_STEP) * AXIS_STEP
@@ -97,7 +98,6 @@ export default function DailyGrid({
           '--count': days.length,
           '--rows-2': Math.ceil(days.length / 2),
           '--rows-3': Math.ceil(days.length / 3),
-          '--need': Math.min(drawnNeed / scale, 1),
           ...(load === 'heavy' && {
             '--need-color': heatColor(clampHeat((needed - FULL_DAY_HOURS) / 6)),
           }),
@@ -142,6 +142,13 @@ export default function DailyGrid({
                   '--h': hours / scale,
                   '--base': Math.min(hours, FULL_DAY_HOURS) / scale,
                   '--index': index,
+                  '--need': Math.min(
+                    Math.min(
+                      day.isToday && shown ? shown.todayTotal : needed,
+                      NEED_CAP_HOURS,
+                    ) / scale,
+                    1,
+                  ),
                   ...(tier && { '--heat': heatColor(day.heat) }),
                 } as CSSProperties
               }
@@ -202,7 +209,7 @@ export default function DailyGrid({
                   className="day-pick"
                   tabIndex={day.key === tabKey ? 0 : -1}
                   aria-pressed={day.key === finishKey}
-                  aria-label={`Finish by ${longDate(day.date)}: ${plan.possible ? `${plan.perDay.toFixed(1)} hours a day` : 'not possible'}`}
+                  aria-label={`Finish by ${longDate(day.date)}: ${plan.possible ? (plan.days === 1 ? `${plan.todayNeeded.toFixed(1)} more hours today` : `${plan.perDay.toFixed(1)} hours a day, ${plan.todayNeeded.toFixed(1)} more today`) : 'not possible'}`}
                   onMouseEnter={() => onPreview(day.key)}
                   onFocus={() => onPreview(day.key)}
                   onBlur={() => onPreview(null)}
@@ -233,7 +240,7 @@ export default function DailyGrid({
             </span>
             <strong>
               {shown.possible
-                ? `${load === 'heavy' ? `${LOAD_FACES[heatTier(clampHeat((needed - FULL_DAY_HOURS) / 6))]} ` : ''}${shown.perDay.toFixed(1)} h a day`
+                ? `${load === 'heavy' ? `${LOAD_FACES[heatTier(clampHeat((needed - FULL_DAY_HOURS) / 6))]} ` : ''}${shown.days === 1 ? `${shown.todayNeeded.toFixed(1)} h more today` : `${shown.perDay.toFixed(1)} h a day · +${shown.todayNeeded.toFixed(1)} h today`}`
                 : `${DEAD} RIP`}
             </strong>
           </div>

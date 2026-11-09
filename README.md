@@ -21,6 +21,8 @@ To finish early, pick a day in the chart (or a row in the ledger): hovering or f
 
 Plans are checked against physical time: campus is open around the clock, so a day holds at most 24 hours, and today only has what is left of it in campus time. The messages are short and darkly funny on purpose. A finish date that cannot fit the remaining hours gets a 💀, with one-click fixes: No sleep (the earliest date at 24 hours a day) and Survivable (12 hours a day). Plans over 12 hours a day escalate from 😵 to 🧟 to ⚰️ with the overtime levels. A requirement larger than the cycle itself (24 hours times its days) is called out under the goal. These checks apply to the plan, not to the hours the API reports.
 
+Daily plans balance today's logged hours with the totals needed on future days. Today contributes only the additional hours that still fit before midnight; the rest is spread across the full days before the deadline. The summary shows the daily target alongside the extra hours needed today, or just the remaining hours for a today-only deadline. Today's dashed outline includes hours already logged. Planning waits for today's hours when they are unavailable, and the even-pace marker follows the actual campus clock rather than a fixed midpoint of the day.
+
 Days fill in as their requests finish, and a thin line at the top of the page shows loading progress.
 
 The dark theme is the default; your login, required hours, and theme are remembered in this browser. A saved login is only sent after you select **Check hours**. Hour records are kept in memory.
@@ -41,7 +43,7 @@ Browser tests start the development server if needed. Screenshots are saved in t
 
 ## Cycle and data
 
-Cycles run from the 28th through the following month's 27th, inclusive. Consecutive periods have no gaps or overlap; the current period switches on the 28th. Today follows the Casablanca calendar; browser time zones do not shift dates.
+Cycles run from the 28th through the following month's 27th, inclusive. Consecutive periods have no gaps or overlap; the current period switches on the 28th. Today follows the Casablanca calendar; browser time zones do not shift dates. Morocco returned permanently to GMT on September 20, 2026 ([government notice](https://www.cg.gov.ma/fr/node/13036)); the calendar applies that rule directly so browsers with older GMT+1 data do not advance to tomorrow at 23:00. Historical dates retain Casablanca's earlier offsets, including Ramadan.
 
 The default API is `https://logtime-med.1337.ma/api/get_log`. To use a compatible endpoint, set `VITE_LOGTIME_API_URL` in `.env` (see `.env.example`). The endpoint must allow browser CORS requests.
 

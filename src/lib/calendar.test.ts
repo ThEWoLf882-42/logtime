@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   addDays,
   campusToday,
+  campusHoursElapsed,
   currentMonth,
   dateKey,
   formatApiDate,
@@ -54,4 +55,24 @@ describe('28th–27th calendar', () => {
       '2026-09-08T23:00:00.000Z',
     )
   })
+  it.each([
+    ['2026-09-09T22:59:59Z', '2026-09-09', 23 + 59 / 60 + 59 / 3600],
+    ['2026-09-09T23:00:00Z', '2026-09-10', 0],
+    ['2026-09-20T00:59:59Z', '2026-09-20', 1 + 59 / 60 + 59 / 3600],
+    ['2026-09-20T01:00:00Z', '2026-09-20', 1],
+    ['2026-11-09T22:59:59Z', '2026-11-09', 22 + 59 / 60 + 59 / 3600],
+    ['2026-11-09T23:00:00Z', '2026-11-09', 23],
+    ['2026-11-09T23:59:59Z', '2026-11-09', 23 + 59 / 60 + 59 / 3600],
+    ['2026-11-10T00:00:00Z', '2026-11-10', 0],
+    ['2026-11-27T23:00:00Z', '2026-11-27', 23],
+    ['2026-11-28T00:00:00Z', '2026-11-28', 0],
+    ['2027-02-22T23:00:00Z', '2027-02-22', 23],
+  ])(
+    'keeps campus dates and clocks consistent at %s',
+    (instant, expectedDate, expectedHour) => {
+      const now = new Date(instant)
+      expect(dateKey(campusToday(now))).toBe(expectedDate)
+      expect(campusHoursElapsed(now)).toBeCloseTo(expectedHour)
+    },
+  )
 })

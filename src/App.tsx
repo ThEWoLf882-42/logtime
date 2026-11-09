@@ -15,7 +15,6 @@ import {
   campusToday,
   currentMonth,
   dateKey,
-  daysBetween,
   formatDate,
   getCycle,
   shiftMonth,
@@ -26,6 +25,7 @@ import {
   DAY_LIMIT_HOURS,
   DEAD,
   earliestFinish,
+  expectedHours,
   finishPlan,
   LOAD_FACES,
   REALISTIC_HOURS,
@@ -157,15 +157,22 @@ export default function App() {
   const elapsed = started
   const average = elapsed ? total / elapsed : 0
   const todayKey = dateKey(today)
+  const todayHours = result.logs.find((log) => log.date === todayKey)?.hours
+  const hasTodayData = todayHours !== null && todayHours !== undefined
   const clock: Clock = {
     today,
     hoursLeftToday: Math.max(DAY_LIMIT_HOURS - clockHours, 0),
-    loggedToday: result.logs.find((log) => log.date === todayKey)?.hours ?? 0,
+    loggedToday: todayHours ?? 0,
   }
   const cycleCapacity = DAY_LIMIT_HOURS * cycle.days.length
   // Finish dates are planned inside the current cycle, from today on, for
   // goals the cycle can hold at all.
-  const canPlan = active && hasData && remaining > 0 && target <= cycleCapacity
+  const canPlan =
+    active &&
+    hasData &&
+    hasTodayData &&
+    remaining > 0 &&
+    target <= cycleCapacity
   const finishDay =
     canPlan && finishBy
       ? (cycle.days.find((day) => dateKey(day) === finishBy && day >= today) ??
@@ -180,7 +187,7 @@ export default function App() {
       )
     : null
   const plan = plans?.get(finishKey ?? dateKey(cycle.end)) ?? null
-  const needed = plan?.perDay ?? (daysLeft ? remaining / daysLeft : 0)
+  const needed = plan?.perDay ?? 0
   const earliest = canPlan ? earliestFinish(remaining, cycle.days, clock) : null
   const realistic = canPlan
     ? earliestFinish(remaining, cycle.days, clock, REALISTIC_HOURS)
@@ -236,13 +243,9 @@ export default function App() {
     .filter((day) => (day.hours ?? 0) > 0)
     .sort((a, b) => b.hours! - a.hours!)[0]
   const loggedDays = result.logs.filter((day) => (day.hours ?? 0) > 0).length
-  // Pace compares the total with the goal spread evenly up to the finish
-  // date, measured to mid-today.
-  const planDays = finishDay
-    ? daysBetween(cycle.start, finishDay) + 1
-    : cycle.days.length
+  // Pace follows the actual campus clock, including the fraction of today elapsed.
   const expected = active
-    ? target * Math.min(Math.max(elapsed - 0.5, 0) / planDays, 1)
+    ? expectedHours(target, cycle.start, finishDay ?? cycle.end, clock)
     : null
   const pace =
     hasData && expected !== null && remaining > 0 ? total - expected : null
@@ -264,13 +267,19 @@ export default function App() {
         ? 'Including today'
         : remaining === 0
           ? 'Goal reached'
-          : plan && !plan.possible
-            ? 'Not humanly possible'
-            : finishDay
-              ? `Until ${shortDate(finishDay)}`
-              : needed > average
-                ? `${(needed - average).toFixed(1)} h above average`
-                : 'Under your average'
+          : !hasTodayData
+            ? loading
+              ? 'Loading today’s hours'
+              : 'Today’s hours unavailable'
+            : target > cycleCapacity
+              ? 'Goal exceeds cycle capacity'
+              : plan && !plan.possible
+                ? 'Not humanly possible'
+                : finishDay
+                  ? `Until ${shortDate(finishDay)}`
+                  : needed > average
+                    ? `${(needed - average).toFixed(1)} h above average`
+                    : 'Under your average'
 
   return (
     <div className="app-shell">
@@ -500,7 +509,7 @@ export default function App() {
               </small>
             </article>
             <article className="stat-card">
-              <h3>Needed per day</h3>
+              <h3>{plan?.days === 1 ? 'Needed today' : 'Needed per day'}</h3>
               <p
                 className={
                   plan && !plan.possible
@@ -511,10 +520,19 @@ export default function App() {
                 }
                 style={{ '--heat': heatColor(loadHeat) } as CSSProperties}
               >
-                {hasData && active ? needed.toFixed(1) : '—'}
+                {hasData && active && (remaining === 0 || plan)
+                  ? (plan?.days === 1 ? plan.todayNeeded : needed).toFixed(1)
+                  : '—'}
                 <span className="unit">h</span>
               </p>
               <small>{neededNote}</small>
+              {plan && (
+                <small className="today-needed">
+                  {plan.days === 1
+                    ? `${trim(plan.todayTotal)} h total today`
+                    : `+${trim(plan.todayNeeded)} h today`}
+                </small>
+              )}
             </article>
             <article className="stat-card">
               <h3>Daily average</h3>
@@ -586,9 +604,7 @@ export default function App() {
                 {hasDailyData ? loggedDays : '—'} of {cycle.days.length} days
                 logged
               </li>
-              {active && hasData && remaining > 0 && (
-                <li className="legend-need">Needed per day</li>
-              )}
+              {plans && <li className="legend-need">Needed per day</li>}
               <li className="legend-heat">Over 12 h</li>
             </ul>
           </div>

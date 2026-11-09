@@ -1298,6 +1298,11 @@ button:disabled {
   .stat-card small {
     display: none;
   }
+  .stat-card small.today-needed {
+    display: block;
+    font-size: 0.625rem;
+    white-space: normal;
+  }
   .ruler {
     padding-top: 1rem;
   }

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import App from './App'
 
@@ -247,7 +247,7 @@ describe('dashboard', () => {
       }),
     )
     expect(document.querySelector('.plan-alert')).toHaveTextContent(
-      '💀 You’d need 39-hour days. RIP.',
+      '💀 You’d need 67-hour days. RIP.',
     )
     expect(
       screen.getByRole('button', { name: 'No sleep: Sat, Sep 12' }),
@@ -267,6 +267,137 @@ describe('dashboard', () => {
     fireEvent.click(screen.getByRole('button', { name: /clear finish date/ }))
     expect(screen.getByText('Pick a day below to finish early')).toBeVisible()
     expect(localStorage.getItem('logtime.finishBy')).toBe('')
+  })
+  it('shows the actual workload for 24 h remaining, 9 h logged, finishing tomorrow at night', async () => {
+    vi.setSystemTime(new Date('2026-11-09T23:04:00Z'))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url, options) => {
+        const { startDate, endDate } = JSON.parse(options.body)
+        return {
+          ok: true,
+          json: async () => ({ totalHours: startDate === endDate ? 9 : 96 }),
+        }
+      }),
+    )
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Your campus login'), {
+      target: { value: 'student' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /Check hours/ }))
+    const tomorrow = await screen.findByRole('button', {
+      name: 'Finish by Tuesday, Nov 10: 23.1 hours a day, 0.9 more today',
+    })
+    fireEvent.click(tomorrow)
+    const needed = screen
+      .getByRole('heading', { name: 'Needed per day' })
+      .closest('article')!
+    expect(needed.querySelector('p')).toHaveTextContent('23.1')
+    expect(needed).toHaveTextContent('+0.9 h today')
+    expect(document.querySelector('.remaining')).toHaveTextContent('24.0')
+    const todayCard = document.querySelector<HTMLElement>('.day-card.is-today')!
+    const tomorrowCard = document.querySelector<HTMLElement>(
+      '.day-card.is-finish',
+    )!
+    // The outline includes today's logged 9 h, rather than another 23.1 h today.
+    expect(Number(todayCard.style.getPropertyValue('--need'))).toBeCloseTo(
+      (9 + 56 / 60) / 24,
+    )
+    expect(Number(tomorrowCard.style.getPropertyValue('--need'))).toBeCloseTo(
+      (24 - 56 / 60) / 24,
+    )
+    expect(document.querySelector('.plan-alert')).toHaveTextContent(
+      'Pick a coffin.',
+    )
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Finish by Monday, Nov 9: not possible',
+      }),
+    )
+    expect(
+      screen.getByRole('heading', { name: 'Needed today' }).closest('article'),
+    ).toHaveTextContent('24.0')
+    expect(document.querySelector('.plan-alert')).toHaveTextContent(
+      'You’d need 33-hour days',
+    )
+  })
+  it('does not treat unavailable hours today as zero for planning', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url, options) => {
+        const { startDate, endDate } = JSON.parse(options.body)
+        if (startDate === endDate && startDate === '2026-09-08T23:00:00.000Z')
+          return { ok: false }
+        return {
+          ok: true,
+          json: async () => ({ totalHours: startDate === endDate ? 2 : 96 }),
+        }
+      }),
+    )
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Your campus login'), {
+      target: { value: 'student' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /Check hours/ }))
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('1 day unavailable'),
+    )
+    const needed = screen
+      .getByRole('heading', { name: 'Needed per day' })
+      .closest('article')!
+    expect(needed.querySelector('p')).toHaveTextContent('—')
+    expect(needed).toHaveTextContent('Today’s hours unavailable')
+    expect(screen.queryByRole('button', { name: /Finish by/ })).toBeNull()
+    expect(document.querySelector('.remaining')).toHaveTextContent('24.0')
+  })
+  it('updates expected hours as campus time advances', () => {
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
+    vi.setSystemTime(new Date('2026-09-09T00:00:00Z'))
+    render(<App />)
+    const expectedMark = () =>
+      parseFloat(document.querySelector<HTMLElement>('.ruler-pace')!.style.left)
+    const before = expectedMark()
+    act(() => vi.advanceTimersByTime(6 * 3600000))
+    expect(expectedMark() - before).toBeCloseTo((100 * 0.25) / 31)
+  })
+  it('keeps November 9 at 23:00 and rolls over only at campus midnight', () => {
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
+    vi.setSystemTime(new Date('2026-11-09T22:59:30Z'))
+    render(<App />)
+    const todayDate = () =>
+      document
+        .querySelector('.day-card.is-today time')!
+        .getAttribute('datetime')
+    expect(todayDate()).toBe('2026-11-09')
+    act(() => vi.advanceTimersByTime(60000))
+    expect(todayDate()).toBe('2026-11-09')
+    act(() => vi.advanceTimersByTime(60 * 60000))
+    expect(todayDate()).toBe('2026-11-10')
+  })
+  it('clears needed hours and planning when the goal is reached', async () => {
+    localStorage.setItem('logtime.finishBy', '2026-09-10')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url, options) => {
+        const { startDate, endDate } = JSON.parse(options.body)
+        return {
+          ok: true,
+          json: async () => ({ totalHours: startDate === endDate ? 9 : 120 }),
+        }
+      }),
+    )
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Your campus login'), {
+      target: { value: 'student' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /Check hours/ }))
+    await screen.findByText('Goal reached')
+    const needed = screen
+      .getByRole('heading', { name: 'Needed per day' })
+      .closest('article')!
+    expect(needed.querySelector('p')).toHaveTextContent('0.0')
+    expect(screen.queryByRole('button', { name: /Finish by/ })).toBeNull()
+    expect(document.querySelector('.plan-alert')).toBeNull()
   })
   it('names goals that cannot fit in the cycle', async () => {
     vi.stubGlobal(

@@ -11,9 +11,17 @@ export const addDays = (date: Date, amount: number) =>
 export const shiftMonth = (month: Date, amount: number) =>
   new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth() + amount, 1))
 
+// Morocco returned permanently to GMT at 02:00 GMT+1 on September 20, 2026.
+// Some browsers still ship the previous GMT+1 rules. Keep current campus dates
+// consistent while retaining historical Casablanca/Ramadan offsets before then.
+// Source: https://www.cg.gov.ma/fr/node/13036 (decree 2.26.530).
+const GMT_RETURN = Date.parse('2026-09-20T01:00:00Z')
+const campusTimeZone = (now: Date) =>
+  now.getTime() >= GMT_RETURN ? 'UTC' : 'Africa/Casablanca'
+
 export function campusToday(now = new Date()) {
   const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Africa/Casablanca',
+    timeZone: campusTimeZone(now),
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -26,14 +34,15 @@ export function campusToday(now = new Date()) {
 /** Hours already passed in today's campus day, from 0 up to 24. */
 export function campusHoursElapsed(now = new Date()) {
   const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Africa/Casablanca',
+    timeZone: campusTimeZone(now),
     hour: '2-digit',
     minute: '2-digit',
+    second: '2-digit',
     hourCycle: 'h23',
   }).formatToParts(now)
   const part = (type: string) =>
     Number(parts.find((p) => p.type === type)?.value)
-  return part('hour') + part('minute') / 60
+  return part('hour') + part('minute') / 60 + part('second') / 3600
 }
 
 export const daysBetween = (from: Date, to: Date) =>

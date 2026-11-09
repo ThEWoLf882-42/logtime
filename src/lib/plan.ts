@@ -23,8 +23,12 @@ export type FinishPlan = {
   key: string
   /** Days from today through the finish date, inclusive. */
   days: number
-  /** Hours each of those days needs, spread evenly. */
+  /** Daily total needed after today; includes logged hours for a today-only plan. */
   perDay: number
+  /** Additional hours to log today; already logged hours are not counted again. */
+  todayNeeded: number
+  /** Today's logged hours plus the additional hours the plan needs today. */
+  todayTotal: number
   /** The most hours that can still be logged by the end of the finish date. */
   capacity: number
   possible: boolean
@@ -43,7 +47,11 @@ export function capacityUntil(
   if (days <= 0) return 0
   // Today only offers what is left of it, and what is left of its daily share.
   const todayRoom = Math.max(
-    Math.min(perDay - clock.loggedToday, clock.hoursLeftToday),
+    Math.min(
+      perDay - clock.loggedToday,
+      clock.hoursLeftToday,
+      DAY_LIMIT_HOURS - clock.loggedToday,
+    ),
     0,
   )
   return todayRoom + perDay * (days - 1)
@@ -54,16 +62,56 @@ export function finishPlan(
   date: Date,
   clock: Clock,
 ): FinishPlan {
-  const days = Math.max(daysBetween(clock.today, date) + 1, 1)
+  const days = Math.max(daysBetween(clock.today, date) + 1, 0)
   const capacity = capacityUntil(date, clock)
+  const hours = Math.max(remaining, 0)
+  const futureDays = Math.max(days - 1, 0)
+  const todayRoom = capacityUntil(clock.today, clock)
+  // Balance today's total (including logged hours) against future daily totals.
+  // Once today runs out of time, spread the rest across the full days left.
+  const todayNeeded =
+    days === 0
+      ? 0
+      : futureDays === 0
+        ? hours
+        : Math.max(
+            Math.min(
+              (hours - futureDays * clock.loggedToday) / days,
+              todayRoom,
+            ),
+            0,
+          )
+  const todayTotal = clock.loggedToday + todayNeeded
+  const perDay =
+    hours === 0 || days === 0
+      ? 0
+      : futureDays === 0
+        ? todayTotal
+        : (hours - todayNeeded) / futureDays
   return {
     date,
     key: dateKey(date),
     days,
-    perDay: remaining / days,
+    perDay,
+    todayNeeded,
+    todayTotal,
     capacity,
-    possible: remaining <= capacity + EPSILON,
+    possible: hours <= capacity + EPSILON,
   }
+}
+
+/** Hours expected at the current campus time on an even pace to the deadline. */
+export function expectedHours(
+  target: number,
+  start: Date,
+  end: Date,
+  clock: Clock,
+) {
+  const days = daysBetween(start, end) + 1
+  if (days <= 0) return 0
+  const elapsed =
+    daysBetween(start, clock.today) + 1 - clock.hoursLeftToday / DAY_LIMIT_HOURS
+  return target * Math.min(Math.max(elapsed / days, 0), 1)
 }
 
 /** The first day by which `remaining` hours fit at `perDay` hours a day, if any. */
