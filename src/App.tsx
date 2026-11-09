@@ -20,6 +20,7 @@ import {
   shiftMonth,
 } from './lib/calendar'
 import { describeDays, FULL_DAY_HOURS } from './lib/days'
+import { durationParts, formatDuration } from './lib/duration'
 import { clampHeat, GOAL_HEAT_LABELS, heatColor, heatTier } from './lib/heat'
 import {
   DAY_LIMIT_HOURS,
@@ -93,7 +94,7 @@ export default function App() {
         return dateKey(previous) === dateKey(next) ? previous : next
       })
       setClockHours(campusHoursElapsed())
-    }, 60000)
+    }, 1000)
     return () => window.clearInterval(timer)
   }, [])
   useEffect(() => {
@@ -187,7 +188,9 @@ export default function App() {
       )
     : null
   const plan = plans?.get(finishKey ?? dateKey(cycle.end)) ?? null
-  const needed = plan?.perDay ?? 0
+  const needed = plan?.days === 1 ? plan.todayNeeded : (plan?.perDay ?? 0)
+  const neededAmount = durationParts(needed)
+  const remainingAmount = durationParts(remaining)
   const earliest = canPlan ? earliestFinish(remaining, cycle.days, clock) : null
   const realistic = canPlan
     ? earliestFinish(remaining, cycle.days, clock, REALISTIC_HOURS)
@@ -233,7 +236,7 @@ export default function App() {
           : `${DEAD} Not enough hours left. RIP.`,
       fixes,
     }
-  else if (plan && plan.perDay > REALISTIC_HOURS)
+  else if (plan && needed > REALISTIC_HOURS)
     planAlert = {
       tone: 'heavy',
       text: `${LOAD_FACES[heatTier(loadHeat)]} ${heavyJokes[heatTier(loadHeat)]}`,
@@ -494,9 +497,11 @@ export default function App() {
               <h3>Remaining</h3>
               <p>
                 <span className="remaining">
-                  {hasData ? remaining.toFixed(1) : '—'}
+                  {hasData ? remainingAmount.value : '—'}
                 </span>
-                <span className="unit">h</span>
+                <span className="unit">
+                  {hasData ? remainingAmount.unit : 'h'}
+                </span>
               </p>
               <small>
                 {past
@@ -521,16 +526,18 @@ export default function App() {
                 style={{ '--heat': heatColor(loadHeat) } as CSSProperties}
               >
                 {hasData && active && (remaining === 0 || plan)
-                  ? (plan?.days === 1 ? plan.todayNeeded : needed).toFixed(1)
+                  ? neededAmount.value
                   : '—'}
-                <span className="unit">h</span>
+                <span className="unit">{neededAmount.unit}</span>
               </p>
-              <small>{neededNote}</small>
+              <small title="Prediction includes the current unfinished hour; backend credits may arrive after logout.">
+                {neededNote}
+              </small>
               {plan && (
                 <small className="today-needed">
                   {plan.days === 1
                     ? `${trim(plan.todayTotal)} h total today`
-                    : `+${trim(plan.todayNeeded)} h today`}
+                    : `+${formatDuration(plan.todayNeeded, true)} today`}
                 </small>
               )}
             </article>

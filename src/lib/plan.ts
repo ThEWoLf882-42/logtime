@@ -29,7 +29,7 @@ export type FinishPlan = {
   todayNeeded: number
   /** Today's logged hours plus the additional hours the plan needs today. */
   todayTotal: number
-  /** The most hours that can still be logged by the end of the finish date. */
+  /** Predicted creditable hours, including the current unfinished hour. */
   capacity: number
   possible: boolean
 }
@@ -37,7 +37,7 @@ export type FinishPlan = {
 // Rounding in the API's hours should not turn a just-possible plan impossible.
 const EPSILON = 1e-6
 
-/** Hours that can still be logged from now through `date` at `perDay` hours a day. */
+/** Whole-hour credit slots through `date`; the current hour stays available. */
 export function capacityUntil(
   date: Date,
   clock: Clock,
@@ -45,15 +45,16 @@ export function capacityUntil(
 ) {
   const days = daysBetween(clock.today, date) + 1
   if (days <= 0) return 0
-  // Today only offers what is left of it, and what is left of its daily share.
-  const todayRoom = Math.max(
-    Math.min(
-      perDay - clock.loggedToday,
-      clock.hoursLeftToday,
-      DAY_LIMIT_HOURS - clock.loggedToday,
-    ),
-    0,
+  // Backend credits can arrive only on logout in whole hours. A partly elapsed
+  // hour may already have been worked, so retain its whole credit until it ends.
+  // Reported totals are authoritative, even when a day reports more than 24 h.
+  const slots = Math.ceil(
+    Math.max(Math.min(clock.hoursLeftToday, DAY_LIMIT_HOURS), 0),
   )
+  const todayRoom =
+    perDay >= DAY_LIMIT_HOURS
+      ? slots
+      : Math.max(Math.min(perDay - clock.loggedToday, slots), 0)
   return todayRoom + perDay * (days - 1)
 }
 
@@ -68,7 +69,7 @@ export function finishPlan(
   const futureDays = Math.max(days - 1, 0)
   const todayRoom = capacityUntil(clock.today, clock)
   // Balance today's total (including logged hours) against future daily totals.
-  // Once today runs out of time, spread the rest across the full days left.
+  // Once today's remaining credit slots are used, spread the rest over full days.
   const todayNeeded =
     days === 0
       ? 0
@@ -76,7 +77,10 @@ export function finishPlan(
         ? hours
         : Math.max(
             Math.min(
-              (hours - futureDays * clock.loggedToday) / days,
+              Math.max(
+                (hours - futureDays * clock.loggedToday) / days,
+                hours - futureDays * DAY_LIMIT_HOURS,
+              ),
               todayRoom,
             ),
             0,

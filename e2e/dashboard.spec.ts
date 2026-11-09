@@ -225,14 +225,14 @@ test('late-night plan keeps already logged hours separate from the remaining wor
   await page.getByRole('button', { name: 'Check hours' }).click()
   await page
     .getByRole('button', {
-      name: 'Finish by Tuesday, Nov 10: 23.1 hours a day, 0.9 more today',
+      name: 'Finish by Tuesday, Nov 10: 23.0 h a day, 1.0 h more today',
     })
     .click()
   const needed = page
     .locator('.stat-card')
     .filter({ has: page.getByRole('heading', { name: 'Needed per day' }) })
-  await expect(needed.locator('p')).toContainText('23.1')
-  await expect(needed).toContainText('+0.9 h today')
+  await expect(needed.locator('p')).toContainText('23.0')
+  await expect(needed).toContainText('+1 h today')
   await expect(needed.locator('.today-needed')).toBeVisible()
   await expect(page.locator('.remaining')).toHaveText('24.0')
   for (const [width, height] of [
@@ -285,6 +285,50 @@ for (const timezoneId of ['UTC', 'America/New_York', 'Asia/Tokyo']) {
     })
   })
 }
+
+test('prediction keeps the unfinished hour and trusts a reported 36-hour day', async ({
+  page,
+}) => {
+  await page.route('**/api/get_log', (route) => {
+    const { startDate, endDate } = route.request().postDataJSON()
+    return route.fulfill({
+      json: { totalHours: startDate === endDate ? 36 : 119 },
+    })
+  })
+  for (const instant of ['2026-11-09T23:55:00Z', '2026-11-09T23:59:59.999Z']) {
+    await page.clock.setFixedTime(new Date(instant))
+    await page.goto('/')
+    await page.getByLabel('Your campus login').fill('test-student')
+    await page.getByRole('button', { name: 'Check hours' }).click()
+    await page
+      .getByRole('button', {
+        name: 'Finish by Monday, Nov 9: 1.0 h more today',
+      })
+      .click()
+    await expect(page.locator('.day-card.is-today .day-hours')).toHaveText(
+      '36.0',
+    )
+    await expect(page.getByRole('progressbar')).toHaveAttribute(
+      'aria-valuetext',
+      '119.0 of 120 hours',
+    )
+    await expect(page.locator('.plan-alert')).toHaveCount(0)
+    await expect(page.getByLabel('Unreported hours')).toHaveCount(0)
+  }
+  await page.clock.setFixedTime(new Date('2026-11-10T00:00:00Z'))
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Check hours' }).click()
+  await expect(page.locator('.day-card.is-today time')).toHaveAttribute(
+    'datetime',
+    '2026-11-10',
+  )
+  await expect(
+    page
+      .locator('.day-card')
+      .filter({ has: page.locator('time[datetime="2026-11-09"]') })
+      .getByRole('button'),
+  ).toHaveCount(0)
+})
 
 test('all daily cards fit the viewport and dark background fills the page', async ({
   page,

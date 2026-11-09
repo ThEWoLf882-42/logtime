@@ -286,25 +286,25 @@ describe('dashboard', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: /Check hours/ }))
     const tomorrow = await screen.findByRole('button', {
-      name: 'Finish by Tuesday, Nov 10: 23.1 hours a day, 0.9 more today',
+      name: 'Finish by Tuesday, Nov 10: 23.0 h a day, 1.0 h more today',
     })
     fireEvent.click(tomorrow)
     const needed = screen
       .getByRole('heading', { name: 'Needed per day' })
       .closest('article')!
-    expect(needed.querySelector('p')).toHaveTextContent('23.1')
-    expect(needed).toHaveTextContent('+0.9 h today')
+    expect(needed.querySelector('p')).toHaveTextContent('23.0')
+    expect(needed).toHaveTextContent('+1 h today')
     expect(document.querySelector('.remaining')).toHaveTextContent('24.0')
     const todayCard = document.querySelector<HTMLElement>('.day-card.is-today')!
     const tomorrowCard = document.querySelector<HTMLElement>(
       '.day-card.is-finish',
     )!
-    // The outline includes today's logged 9 h, rather than another 23.1 h today.
+    // The outline includes the current hour's possible credit plus the reported 9 h.
     expect(Number(todayCard.style.getPropertyValue('--need'))).toBeCloseTo(
-      (9 + 56 / 60) / 24,
+      10 / 24,
     )
     expect(Number(tomorrowCard.style.getPropertyValue('--need'))).toBeCloseTo(
-      (24 - 56 / 60) / 24,
+      23 / 24,
     )
     expect(document.querySelector('.plan-alert')).toHaveTextContent(
       'Pick a coffin.',
@@ -357,7 +357,8 @@ describe('dashboard', () => {
     const expectedMark = () =>
       parseFloat(document.querySelector<HTMLElement>('.ruler-pace')!.style.left)
     const before = expectedMark()
-    act(() => vi.advanceTimersByTime(6 * 3600000))
+    vi.setSystemTime(new Date('2026-09-09T05:59:59Z'))
+    act(() => vi.advanceTimersByTime(1000))
     expect(expectedMark() - before).toBeCloseTo((100 * 0.25) / 31)
   })
   it('keeps November 9 at 23:00 and rolls over only at campus midnight', () => {
@@ -371,7 +372,8 @@ describe('dashboard', () => {
     expect(todayDate()).toBe('2026-11-09')
     act(() => vi.advanceTimersByTime(60000))
     expect(todayDate()).toBe('2026-11-09')
-    act(() => vi.advanceTimersByTime(60 * 60000))
+    vi.setSystemTime(new Date('2026-11-09T23:59:59Z'))
+    act(() => vi.advanceTimersByTime(1000))
     expect(todayDate()).toBe('2026-11-10')
   })
   it('clears needed hours and planning when the goal is reached', async () => {
@@ -398,6 +400,48 @@ describe('dashboard', () => {
     expect(needed.querySelector('p')).toHaveTextContent('0.0')
     expect(screen.queryByRole('button', { name: /Finish by/ })).toBeNull()
     expect(document.querySelector('.plan-alert')).toBeNull()
+  })
+  it('predicts a last-minute hour without correcting a reported 36-hour day', async () => {
+    vi.setSystemTime(new Date('2026-11-09T23:59:59Z'))
+    localStorage.setItem('logtime.finishBy', '2026-11-09')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url, options) => {
+        const { startDate, endDate } = JSON.parse(options.body)
+        return {
+          ok: true,
+          json: async () => ({ totalHours: startDate === endDate ? 36 : 119 }),
+        }
+      }),
+    )
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Your campus login'), {
+      target: { value: 'student' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /Check hours/ }))
+    await screen.findByRole('button', {
+      name: 'Finish by Monday, Nov 9: 1.0 h more today',
+    })
+    expect(screen.getByRole('progressbar')).toHaveAttribute(
+      'aria-valuetext',
+      '119.0 of 120 hours',
+    )
+    expect(
+      document.querySelector('.day-card.is-today .day-hours'),
+    ).toHaveTextContent('36.0')
+    const todayCard = document.querySelector<HTMLElement>('.day-card.is-today')!
+    expect(Number(todayCard.style.getPropertyValue('--need'))).toBeCloseTo(
+      37 / 40,
+    )
+    expect(Number(todayCard.style.getPropertyValue('--h'))).toBeCloseTo(36 / 40)
+    expect(
+      screen
+        .getByRole('heading', { name: 'Needed today' })
+        .closest('article')!
+        .querySelector('p'),
+    ).toHaveTextContent('1.0')
+    expect(document.querySelector('.plan-alert')).toBeNull()
+    expect(screen.queryByLabelText('Unreported hours')).toBeNull()
   })
   it('names goals that cannot fit in the cycle', async () => {
     vi.stubGlobal(

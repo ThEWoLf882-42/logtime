@@ -1,6 +1,7 @@
 import { useRef, type CSSProperties, type KeyboardEvent } from 'react'
 import { formatDate } from '../lib/calendar'
 import { FULL_DAY_HOURS, type DayInfo } from '../lib/days'
+import { formatDuration } from '../lib/duration'
 import { clampHeat, DAY_HEAT_LABELS, heatColor, heatTier } from '../lib/heat'
 import { DAY_LIMIT_HOURS, DEAD, LOAD_FACES, type FinishPlan } from '../lib/plan'
 
@@ -43,12 +44,18 @@ export default function DailyGrid({
   const shownKey = preview ?? finishKey ?? lastKey
   const shown = plans?.get(shownKey) ?? null
   const shownIndex = days.findIndex((day) => day.key === shownKey)
-  const needed = shown?.perDay ?? 0
+  const needed = shown?.days === 1 ? shown.todayNeeded : (shown?.perDay ?? 0)
   const drawnNeed = Math.min(needed, NEED_CAP_HOURS)
+  // Cap only the prediction, never the hours already reported by the backend.
+  const todayDrawnNeed = shown
+    ? shown.todayTotal -
+      shown.todayNeeded +
+      Math.min(shown.todayNeeded, NEED_CAP_HOURS)
+    : 0
   const peak = Math.max(
     FULL_DAY_HOURS,
     drawnNeed,
-    shown ? Math.min(shown.todayTotal, NEED_CAP_HOURS) : 0,
+    todayDrawnNeed,
     ...days.map((day) => day.hours ?? 0),
   )
   const scale = Math.ceil(peak / AXIS_STEP) * AXIS_STEP
@@ -142,13 +149,7 @@ export default function DailyGrid({
                   '--h': hours / scale,
                   '--base': Math.min(hours, FULL_DAY_HOURS) / scale,
                   '--index': index,
-                  '--need': Math.min(
-                    Math.min(
-                      day.isToday && shown ? shown.todayTotal : needed,
-                      NEED_CAP_HOURS,
-                    ) / scale,
-                    1,
-                  ),
+                  '--need': (day.isToday ? todayDrawnNeed : drawnNeed) / scale,
                   ...(tier && { '--heat': heatColor(day.heat) }),
                 } as CSSProperties
               }
@@ -209,7 +210,7 @@ export default function DailyGrid({
                   className="day-pick"
                   tabIndex={day.key === tabKey ? 0 : -1}
                   aria-pressed={day.key === finishKey}
-                  aria-label={`Finish by ${longDate(day.date)}: ${plan.possible ? (plan.days === 1 ? `${plan.todayNeeded.toFixed(1)} more hours today` : `${plan.perDay.toFixed(1)} hours a day, ${plan.todayNeeded.toFixed(1)} more today`) : 'not possible'}`}
+                  aria-label={`Finish by ${longDate(day.date)}: ${plan.possible ? (plan.days === 1 ? `${formatDuration(plan.todayNeeded)} more today` : `${formatDuration(plan.perDay)} a day, ${formatDuration(plan.todayNeeded)} more today`) : 'not possible'}`}
                   onMouseEnter={() => onPreview(day.key)}
                   onFocus={() => onPreview(day.key)}
                   onBlur={() => onPreview(null)}
@@ -240,7 +241,7 @@ export default function DailyGrid({
             </span>
             <strong>
               {shown.possible
-                ? `${load === 'heavy' ? `${LOAD_FACES[heatTier(clampHeat((needed - FULL_DAY_HOURS) / 6))]} ` : ''}${shown.days === 1 ? `${shown.todayNeeded.toFixed(1)} h more today` : `${shown.perDay.toFixed(1)} h a day · +${shown.todayNeeded.toFixed(1)} h today`}`
+                ? `${load === 'heavy' ? `${LOAD_FACES[heatTier(clampHeat((needed - FULL_DAY_HOURS) / 6))]} ` : ''}${shown.days === 1 ? `${formatDuration(shown.todayNeeded)} more today` : `${formatDuration(shown.perDay)} a day · +${formatDuration(shown.todayNeeded)} today`}`
                 : `${DEAD} RIP`}
             </strong>
           </div>

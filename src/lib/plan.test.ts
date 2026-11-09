@@ -174,9 +174,11 @@ describe('finish plans', () => {
               expect(
                 capacityUntil(date, now, plan.perDay),
               ).toBeGreaterThanOrEqual(remaining - 1e-6)
-              expect(plan.todayNeeded).toBeLessThanOrEqual(left + 1e-6)
-              expect(plan.todayTotal).toBeLessThanOrEqual(24 + 1e-6)
-              expect(plan.perDay).toBeLessThanOrEqual(24 + 1e-6)
+              expect(plan.todayNeeded).toBeLessThanOrEqual(
+                Math.ceil(left) + 1e-6,
+              )
+              if (deadline > 0)
+                expect(plan.perDay).toBeLessThanOrEqual(24 + 1e-6)
             }
           }
         }
@@ -187,6 +189,37 @@ describe('finish plans', () => {
     expect(earliestFinish(58, cycleDays, clock)).toEqual(day('2026-09-11'))
     expect(earliestFinish(58, cycleDays, clock, 12)).toEqual(day('2026-09-13'))
     expect(earliestFinish(1000, cycleDays, clock)).toBeNull()
+  })
+  it.each([60, 15, 1, 0.001])(
+    'keeps the current hour creditable with %s seconds left',
+    (seconds) => {
+      const now = { ...clock, hoursLeftToday: seconds / 3600, loggedToday: 36 }
+      expect(capacityUntil(clock.today, now)).toBe(1)
+      expect(finishPlan(1, clock.today, now)).toMatchObject({
+        possible: true,
+        todayNeeded: 1,
+        todayTotal: 37,
+      })
+      expect(earliestFinish(1, cycleDays, now)).toEqual(clock.today)
+      expect(now.loggedToday).toBe(36)
+    },
+  )
+  it('removes an hour only once it has fully elapsed', () => {
+    expect(
+      capacityUntil(clock.today, { ...clock, hoursLeftToday: 1 + 1 / 60 }),
+    ).toBe(2)
+    expect(capacityUntil(clock.today, { ...clock, hoursLeftToday: 1 })).toBe(1)
+    expect(
+      capacityUntil(clock.today, { ...clock, hoursLeftToday: 1 / 60 }),
+    ).toBe(1)
+    expect(capacityUntil(clock.today, { ...clock, hoursLeftToday: 0 })).toBe(0)
+    const late = { ...clock, hoursLeftToday: 1 / 60, loggedToday: 9 }
+    expect(finishPlan(25, day('2026-09-10'), late)).toMatchObject({
+      possible: true,
+      todayNeeded: 1,
+      perDay: 24,
+    })
+    expect(finishPlan(26, day('2026-09-10'), late).possible).toBe(false)
   })
 })
 

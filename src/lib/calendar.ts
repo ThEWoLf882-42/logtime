@@ -42,7 +42,12 @@ export function campusHoursElapsed(now = new Date()) {
   }).formatToParts(now)
   const part = (type: string) =>
     Number(parts.find((p) => p.type === type)?.value)
-  return part('hour') + part('minute') / 60 + part('second') / 3600
+  return (
+    part('hour') +
+    part('minute') / 60 +
+    part('second') / 3600 +
+    now.getUTCMilliseconds() / 3600000
+  )
 }
 
 export const daysBetween = (from: Date, to: Date) =>
